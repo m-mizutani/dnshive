@@ -15,13 +15,13 @@ Example
 
     TCP 10.0.0.2:51694 > iad23s07-in-f1.1e100.net.https:
     TCP iad23s07-in-f1.1e100.net.https > 10.0.0.2:51694
-	TCP 10.0.0.2:51694 > iad23s07-in-f1.1e100.net.https:
+    TCP 10.0.0.2:51694 > iad23s07-in-f1.1e100.net.https:
 
 ### Forward lookup based display (DnsHive)
 
     TCP my-macosx.local:51694 > www.google.com.https:
     TCP www.google.com.https > my-macosx.local:51694
-	TCP my-macosx.local:51694 > www.google.com.https:
+    TCP my-macosx.local:51694 > www.google.com.https:
     
 
 Usage

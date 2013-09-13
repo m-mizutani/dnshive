@@ -115,10 +115,10 @@ def build(bld):
         target = target_name)
 
     inc_dir = os.path.join (bld.path.abspath(), 'src')
-    src_list.extend (get_src_list ('cli', cc_file))
+    src_list = (get_src_list ('cli', cc_file))
     bld.program(features = 'cxxprogram',
                 source = src_list,
-                target = test_cmd,
+                target = 'dhive',
                 use = [target_name],
                 includes = [inc_dir],
                 LIBDIR = [os.path.join (bld.env.PREFIX, 'lib')],

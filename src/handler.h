@@ -24,25 +24,30 @@
  * POSSIBILITY OF SUCH DAMAGE.
  */
 
-#ifndef __LIB_DNSHIVE_H__
-#define __LIB_DNSHIVE_H__
+#ifndef SRC__HANDLER__
+#define SRC__HANDLER__
 
 #include <swarm.h>
 
 namespace dnshive {
-  class DnsFwdDB;
-  class IPFlow;
-
-  class Hive {
+  class DnsFwdDB : public swarm::Handler {
   private:
-    swarm::NetDec *nd_;
-    DnsFwdDB *dns_db_;
-    IPFlow *ip4_flow_;
+    std::map <u_int32_t, std::string> rev_map_;
 
   public:
-    Hive ();
-    ~Hive ();
+    const std::string * lookup (u_int32_t * v4addr);
+    void recv (swarm::ev_id eid, const  swarm::Property &p);
   };
-}
 
-#endif
+  class IPFlow : public swarm::Handler {
+  private:
+    DnsFwdDB * db_;
+
+  public:
+    void set_db (DnsFwdDB *db);
+    void recv (swarm::ev_id eid, const  swarm::Property &p);
+  };
+}  // namespace dnshive
+
+#endif  // SRC__HANDLER__
+
