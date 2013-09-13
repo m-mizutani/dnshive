@@ -7,7 +7,7 @@ VERSION = "0.1"
 target_name = 'dnshive'
 lib_fname = 'dnshive.h'
 test_cmd = 'my_test'
-main_lib = ['pthread', 'swarm']
+main_lib = ['swarm', 'hiredis']
 
 
 import sys

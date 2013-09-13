@@ -30,7 +30,7 @@
 
 
 #include "dnshive.h"
-#include "handler.h"
+#include "proc.h"
 
 namespace dnshive {
   /*

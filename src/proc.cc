@@ -24,7 +24,7 @@
  * POSSIBILITY OF SUCH DAMAGE.
  */
 
-#include "handler.h"
+#include "proc.h"
 
 namespace dnshive {
   const std::string * DnsFwdDB::lookup (u_int32_t * v4addr) {
