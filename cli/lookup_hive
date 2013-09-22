@@ -1,0 +1,19 @@
+#!/usr/bin/env python
+
+import msgpack
+import redis
+import sys
+
+def lookup(data, opt):
+    r = redis.Redis (host='127.0.0.1', port=6379, db=0)
+    obj = r.lrange (data, 0, -1)
+    unpkr = msgpack.Unpacker()
+
+    for o in obj:
+        print msgpack.unpackb (o)
+
+
+
+if __name__ == '__main__':
+    for data in sys.argv[1:]:
+        lookup (data, None)

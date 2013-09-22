@@ -28,13 +28,19 @@
 #define SRC__HANDLER__
 
 #include <swarm.h>
+#include <hiredis/hiredis.h>
 
 namespace dnshive {
   class DnsFwdDB : public swarm::Handler {
   private:
+    static const std::string REDIS_HOST_;
+    static const int REDIS_PORT_;
     std::map <u_int32_t, std::string> rev_map_;
+    redisContext *redis_ctx_;
 
   public:
+    DnsFwdDB ();
+    ~DnsFwdDB ();
     const std::string * lookup (u_int32_t * v4addr);
     void recv (swarm::ev_id eid, const  swarm::Property &p);
   };

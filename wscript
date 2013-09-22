@@ -7,7 +7,7 @@ VERSION = "0.1"
 target_name = 'dnshive'
 lib_fname = 'dnshive.h'
 test_cmd = 'my_test'
-main_lib = ['swarm', 'hiredis']
+main_lib = ['swarm', 'hiredis', 'msgpack']
 
 
 import sys
@@ -105,7 +105,7 @@ def build(bld):
     global main_lib
     global lib_fname
     src_dir = 'src'
-    cc_file = '[_A-Za-z0-9].*\.cc'
+    cc_file = '^[_A-Za-z0-9].*\.cc'
 
     src_list.extend (get_src_list (src_dir, cc_file))
     bld.shlib(

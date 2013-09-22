@@ -78,6 +78,8 @@ namespace dnshive {
     this->dns_db_ = new DnsFwdDB ();
     this->ip4_flow_ = new IPFlow ();
     this->ip4_flow_->set_db (this->dns_db_);
+    this->nd_->set_handler ("dns.an", this->dns_db_);
+    // this->nd_->set_handler ("ipv4.packet", this->ip4_flow_);
   }
   Hive::~Hive () {
     delete this->nd_;
@@ -85,6 +87,21 @@ namespace dnshive {
     delete this->dns_db_;
   }
 
+  bool Hive::capture (const std::string &arg, bool dev) {
+    swarm::NetCap *nc = new swarm::NetCap (this->nd_);
+
+    if (dev) {
+      if (!nc->capture (arg)) {
+        printf ("error: %s\n", nc->errmsg ().c_str ());
+      }
+    } else {
+      if (!nc->read_pcapfile (arg)) {
+        printf ("error: %s, %s\n", arg.c_str (), nc->errmsg ().c_str ());
+      }
+    }
+
+    return true;
+  }
   
 }
 
