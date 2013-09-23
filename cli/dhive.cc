@@ -32,19 +32,33 @@ int main (int argc, char *argv[]) {
   optparse::OptionParser psr = optparse::OptionParser();
   psr.add_option("-r", "--read-file").action("append").dest(od_file);
   psr.add_option("-i", "--interface").action("store").dest("interface");
+  psr.add_option("-d", "--redis-db").action("store").dest("redis_db");
+  psr.add_option("-h", "--redis-host").action("store").dest("redis_host")
+    .set_default ("localhost");
+  psr.add_option("-p", "--redis-port").action("store").dest("redis_port")
+    .set_default ("6379");
 
   optparse::Values& opt = psr.parse_args(argc, argv);
   std::vector <std::string> args = psr.args();
 
   dnshive::Hive *h = new dnshive::Hive ();
+  if (opt.is_set ("redis_db")) {
+    if (!h->enable_redis_db (opt["redis_host"], opt["redis_port"],
+                             opt["redis_db"])) {
+      std::cerr << "Error: " << h->errmsg () << std::endl;
+    }
+  }
 
   if (opt.is_set ("interface")) {
+    // monitoring network interface
+    std::cerr << "Interface: " << opt["interface"] << std::endl;
     h->capture (opt["interface"], true);  // dev = true
   } else {
+    // reading files
     for (auto it = opt.all(od_file).begin ();
          it != opt.all(od_file).end (); it++) {
-      
-      printf ("file: %s\n", (*it).c_str ());
+
+      std::cerr << "Read file: " << (*it) << std::endl;
       h->capture (*it, false);  // dev = false
     }
   }

@@ -35,14 +35,19 @@ namespace dnshive {
   private:
     static const std::string REDIS_HOST_;
     static const int REDIS_PORT_;
-    std::map <u_int32_t, std::string> rev_map_;
+    std::map <std::string, std::string> rev_map_;
     redisContext *redis_ctx_;
+    std::string errmsg_;
 
   public:
     DnsFwdDB ();
     ~DnsFwdDB ();
-    const std::string * lookup (u_int32_t * v4addr);
+    const std::string * lookup (void * addr, size_t len);
     void recv (swarm::ev_id eid, const  swarm::Property &p);
+    bool enable_redis_db (const std::string &host, const std::string &port,
+                          const std::string &db);
+    int load_redis_db ();
+    const std::string &errmsg () const;
   };
 
   class IPFlow : public swarm::Handler {

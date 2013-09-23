@@ -1,8 +1,8 @@
 #! /usr/bin/env python
 # encoding: utf-8
 
-APPNAME = 'CPP_PROJECT'
-VERSION = "0.1"
+APPNAME = 'DnsHive'
+VERSION = "0.1.0"
 
 target_name = 'dnshive'
 lib_fname = 'dnshive.h'
@@ -125,7 +125,7 @@ def build(bld):
                 rpath = [os.path.join (bld.env.PREFIX, 'lib'),
                          os.path.join (bld.path.abspath(), 'build')])
 
-    bld.install_files('${PREFIX}/include', lib_fname) 
+    bld.install_files('${PREFIX}/include', os.path.join ('src', lib_fname))
 
     # test code
     if bld.env.test:

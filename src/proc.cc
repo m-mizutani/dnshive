@@ -24,7 +24,10 @@
  * POSSIBILITY OF SUCH DAMAGE.
  */
 
+#include <string.h>
 #include <msgpack.hpp>
+#include <iostream>
+
 #include "proc.h"
 #include "debug.h"
 
@@ -33,15 +36,7 @@ namespace dnshive {
   const int DnsFwdDB::REDIS_PORT_ = 6379;
   const bool DBG = true;
 
-  DnsFwdDB::DnsFwdDB () {
-    this->redis_ctx_ = redisConnect(REDIS_HOST_.c_str (), REDIS_PORT_);
-    if (this->redis_ctx_ == NULL) {
-      printf ("Critical Error in hiredis\n");
-    } else if (this->redis_ctx_->err) {
-      printf("Error: %s\n", this->redis_ctx_->errstr);
-      redisFree (this->redis_ctx_);
-      this->redis_ctx_ = NULL;
-    }
+  DnsFwdDB::DnsFwdDB () : redis_ctx_(NULL) {
   }
   DnsFwdDB::~DnsFwdDB () {
     if (this->redis_ctx_) {
@@ -49,8 +44,107 @@ namespace dnshive {
     }
   }
 
-  const std::string * DnsFwdDB::lookup (u_int32_t * v4addr) {
-    auto it = this->rev_map_.find (*v4addr);
+  bool DnsFwdDB::enable_redis_db (const std::string &host, const std::string &port,
+                                  const std::string &db) {
+    bool rc = true;
+
+    char *e;
+    int p = ::strtol (port.c_str (), &e, 0);
+
+    if (*e != '\0') {
+      this->errmsg_ = "port number \"" + port + "\" should be digit";
+    } else {
+      // connect to redis server
+      this->redis_ctx_ = redisConnect(host.c_str (), p);
+      if (this->redis_ctx_ == NULL) {
+        this->errmsg_ = "Critical Error in hiredis";
+        rc = false;
+      } else if (this->redis_ctx_->err) {
+        this->errmsg_ = this->redis_ctx_->errstr;
+        rc = false;
+      } else {
+        // select redis DB
+        struct redisReply * com = static_cast<struct redisReply *>
+          (redisCommand(this->redis_ctx_, "select %s", db.c_str ()));
+        if (NULL == com) {
+          this->errmsg_ = "Critical error in hiredis to select DB \"" + db + "\"";
+          rc = false;
+        } else if (com->type == REDIS_REPLY_ERROR) {
+          this->errmsg_.assign (com->str, com->len);
+          rc = false;
+        }
+
+        if (com) {
+          freeReplyObject (com);
+        }
+      }
+    }
+
+    if (!rc && this->redis_ctx_) {
+      redisFree (this->redis_ctx_);
+      this->redis_ctx_ = NULL;
+    }
+
+    return rc;
+  }
+
+  int DnsFwdDB::load_redis_db () {
+    struct redisReply * com = static_cast<struct redisReply *>
+      (redisCommand(this->redis_ctx_, "keys *"));
+
+    std::deque <std::string> key_list;
+    std::string key, name;
+    if (com->type == REDIS_REPLY_ARRAY) {
+      for (int i = 0; i < com->elements; i++) {
+        key.assign (com->element[i]->str, com->element[i]->len);
+        key_list.push_back (key);
+      }
+    } else {
+      this->errmsg_ = "invalid data type (";
+      this->errmsg_ += com->type;
+      this->errmsg_ += ")";
+      return -1;
+    }
+    freeReplyObject (com);
+
+    int rc = 0;
+    for (auto it = key_list.begin (); it != key_list.end (); it++) {
+      auto rep = static_cast<struct redisReply *>
+        (redisCommand(this->redis_ctx_, "lrange %b -1 -1", key.data (), key.size ()));
+
+      if (rep->element > 0) {
+        msgpack::unpacked msg;
+        msgpack::unpack(&msg, rep->element[0]->str, rep->element[0]->len);
+        msgpack::object obj = msg.get ();
+
+        std::string t;
+
+        if(obj.via.map.size != 0) {
+          msgpack::object_kv* p(obj.via.map.ptr);
+          for(msgpack::object_kv* const pend(obj.via.map.ptr + obj.via.map.size);
+              p < pend; ++p) {
+            std::string k;
+            p->key.convert (&k);
+            if (k == "name") {
+              p->val.convert (&name);
+              
+              // std::cout << k << "=>" << name;
+              this->rev_map_.insert (std::make_pair (key, name));
+              rc++;
+              break;
+            }
+          }
+        }
+      }
+    }
+
+    return rc;
+  }
+
+
+  const std::string * DnsFwdDB::lookup (void * addr, size_t len) {
+    std::string key (static_cast<char *>(addr), len);
+    auto it = this->rev_map_.find (key);
     if (it == this->rev_map_.end ()) {
       return NULL;
     } else {
@@ -73,12 +167,13 @@ namespace dnshive {
       addr = p.param ("dns.an_data")->repr (i);
       debug (DBG, "%s (%s) %s", name.c_str (), type.c_str (), addr.c_str ());
 
-      void * ptr = p.param ("dns.an_data")->get (NULL, i);
+      size_t len;
+      void * ptr = p.param ("dns.an_data")->get (&len, i);
 
-      if (ptr) {
+      if (ptr && (type == "A" || type == "AAAA")) {
         // register to in-memory DB
-        u_int32_t * a = static_cast<u_int32_t*> (ptr);
-        this->rev_map_.insert (std::make_pair (*a, name));
+        std::string key (static_cast<char*>(ptr), len);
+        this->rev_map_.insert (std::make_pair (key, name));
 
         // register to redis
         if (this->redis_ctx_) {
@@ -91,15 +186,25 @@ namespace dnshive {
           pk.pack (k_type); pk.pack (type);
           pk.pack (k_name); pk.pack (name);
 
-          const std::string &data = p.param ("dns.an_data")->repr (i);
-          void *com = redisCommand(this->redis_ctx_, 
+          // const std::string &data = p.param ("dns.an_data")->repr (i);
+          /*
+          void *com = redisCommand(this->redis_ctx_,
                                    "lpush %s %b", data.c_str (), buf.data (), buf.size ());
+          */
+
+          void *com = redisCommand(this->redis_ctx_, 
+                                   "lpush %b %b", ptr, len, buf.data (), buf.size ());
+
           freeReplyObject (com);
         }
 
       }
     }
     return;
+  }
+
+  const std::string &DnsFwdDB::errmsg () const {
+    return this->errmsg_;
   }
 
 
@@ -110,22 +215,25 @@ namespace dnshive {
   void IPFlow::recv (swarm::ev_id eid, const  swarm::Property &p) {
     std::string s_tmp, d_tmp;
     const std::string *src, *dst;
-    void *s_addr = p.param ("ipv4.src")->get ();
-    void *d_addr = p.param ("ipv4.dst")->get ();
+    size_t src_len, dst_len;
+    void *s_addr = p.src_addr (&src_len);
+    void *d_addr = p.dst_addr (&dst_len);
     if (!s_addr || !d_addr) {
       return;
     }
 
-    if (NULL == (src = this->db_->lookup (static_cast<u_int32_t*>(s_addr)))) {
-      s_tmp = p.param("ipv4.src")->repr ();
+    if (NULL == (src = this->db_->lookup (s_addr, src_len))) {
+      s_tmp = p.src_addr ();
       src = &s_tmp;
     }
-    if (NULL == (dst = this->db_->lookup (static_cast<u_int32_t*>(d_addr)))) {
-      d_tmp = p.param("ipv4.dst")->repr ();
+    if (NULL == (dst = this->db_->lookup (d_addr, dst_len))) {
+      d_tmp = p.dst_addr ();
       dst = &d_tmp;
     }
 
-    // printf ("%s -> %s\n", src->c_str (), dst->c_str ());
+    std::string proto = p.proto ();
+    printf ("%14.6f %s %s:%d -> %s:%d\n", p.ts (), proto.c_str (),
+            src->c_str (), p.src_port (), dst->c_str (), p.dst_port ());
   }
 
 }  // namespace dnshive

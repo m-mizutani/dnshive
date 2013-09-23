@@ -31,6 +31,7 @@
 
 #include "dnshive.h"
 #include "proc.h"
+#include "debug.h"
 
 namespace dnshive {
   /*
@@ -79,7 +80,7 @@ namespace dnshive {
     this->ip4_flow_ = new IPFlow ();
     this->ip4_flow_->set_db (this->dns_db_);
     this->nd_->set_handler ("dns.an", this->dns_db_);
-    // this->nd_->set_handler ("ipv4.packet", this->ip4_flow_);
+    this->nd_->set_handler ("ipv4.packet", this->ip4_flow_);
   }
   Hive::~Hive () {
     delete this->nd_;
@@ -101,6 +102,22 @@ namespace dnshive {
     }
 
     return true;
+  }
+
+  bool Hive::enable_redis_db (const std::string &host, const std::string &port,
+                              const std::string &db) {
+    if (this->dns_db_->enable_redis_db (host, port, db)) {
+      int rc = this->dns_db_->load_redis_db ();
+      debug (1, "rc = %d", rc);
+      return true;
+    } else {
+      this->errmsg_ = this->dns_db_->errmsg ();
+      return false;
+    }
+  }
+
+  const std::string& Hive::errmsg () const {
+    return this->errmsg_;
   }
   
 }

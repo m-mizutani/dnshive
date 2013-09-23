@@ -48,11 +48,15 @@ namespace dnshive {
     swarm::NetDec *nd_;
     DnsFwdDB *dns_db_;
     IPFlow *ip4_flow_;
+    std::string errmsg_;
 
   public:
     Hive ();
     ~Hive ();
     bool capture (const std::string &arg, bool dev=true);
+    bool enable_redis_db (const std::string &host, const std::string &port,
+                          const std::string &db);
+    const std::string& errmsg () const;
   };
 }
 
