@@ -27,21 +27,48 @@
 #include <dnshive.h>
 #include "./optparse.h"
 
+class PktHandler : public dnshive::Handler {
+ public:
+  PktHandler() {
+  }
+  virtual ~PktHandler() {
+  }
+  
+  void flow (const std::string &src, const std::string &dst,
+             const swarm::Property &prop) {
+    std::string proto = prop.proto ();
+    printf ("%14.6f %s %s/%d -> %s/%d %d length\n", prop.ts (), proto.c_str (),
+            src.c_str (), prop.src_port (), dst.c_str (), prop.dst_port (),
+            prop.len ());
+  }
+};
+
 int main (int argc, char *argv[]) {
+  // Handling command line arguments
   const std::string &od_file = "read_file";
   optparse::OptionParser psr = optparse::OptionParser();
-  psr.add_option("-r", "--read-file").action("append").dest(od_file);
-  psr.add_option("-i", "--interface").action("store").dest("interface");
-  psr.add_option("-d", "--redis-db").action("store").dest("redis_db");
-  psr.add_option("-h", "--redis-host").action("store").dest("redis_host")
-    .set_default ("localhost");
-  psr.add_option("-p", "--redis-port").action("store").dest("redis_port")
-    .set_default ("6379");
+  psr.add_option("-r").action("append").dest(od_file)
+    .help("Specify read pcap format file(s)");
+  psr.add_option("-i").action("store").dest("interface")
+    .help("Specify interface to monitor on the fly");
+  psr.add_option("-d").action("store").dest("redis_db")
+    .metavar ("INT")
+    .help("Redis DB Index (MUST be set if you want redis DB");
+  psr.add_option("-h").action("store").dest("redis_host")
+    .set_default ("localhost")
+    .help("Reids DB Host, default is localhost");
+  psr.add_option("-p").action("store").dest("redis_port")
+    .set_default ("6379").metavar ("INT")
+    .help("Reids DB Port, default is 6379");
 
   optparse::Values& opt = psr.parse_args(argc, argv);
   std::vector <std::string> args = psr.args();
 
+  // Preparing DnsHive instance
   dnshive::Hive *h = new dnshive::Hive ();
+  PktHandler * ph = new PktHandler ();
+  h->set_handler (ph);
+
   if (opt.is_set ("redis_db")) {
     if (!h->enable_redis_db (opt["redis_host"], opt["redis_port"],
                              opt["redis_db"])) {

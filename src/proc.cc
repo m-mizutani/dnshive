@@ -34,7 +34,7 @@
 namespace dnshive {
   const std::string DnsFwdDB::REDIS_HOST_ = "localhost";
   const int DnsFwdDB::REDIS_PORT_ = 6379;
-  const bool DBG = true;
+  const bool DBG = false;
 
   DnsFwdDB::DnsFwdDB () : redis_ctx_(NULL) {
   }
@@ -186,18 +186,11 @@ namespace dnshive {
           pk.pack (k_type); pk.pack (type);
           pk.pack (k_name); pk.pack (name);
 
-          // const std::string &data = p.param ("dns.an_data")->repr (i);
-          /*
-          void *com = redisCommand(this->redis_ctx_,
-                                   "lpush %s %b", data.c_str (), buf.data (), buf.size ());
-          */
-
           void *com = redisCommand(this->redis_ctx_, 
                                    "lpush %b %b", ptr, len, buf.data (), buf.size ());
 
           freeReplyObject (com);
         }
-
       }
     }
     return;
@@ -208,32 +201,46 @@ namespace dnshive {
   }
 
 
+  IPFlow::IPFlow () : hdlr_(NULL) {
+  }
+  IPFlow::~IPFlow () {
+  }
+
   void IPFlow::set_db (DnsFwdDB *db) {
     this->db_ = db;
   }
 
   void IPFlow::recv (swarm::ev_id eid, const  swarm::Property &p) {
-    std::string s_tmp, d_tmp;
-    const std::string *src, *dst;
-    size_t src_len, dst_len;
-    void *s_addr = p.src_addr (&src_len);
-    void *d_addr = p.dst_addr (&dst_len);
-    if (!s_addr || !d_addr) {
-      return;
-    }
+    if (this->hdlr_) {
+      std::string s_tmp, d_tmp;
+      const std::string *src, *dst;
+      size_t src_len, dst_len;
+      void *s_addr = p.src_addr (&src_len);
+      void *d_addr = p.dst_addr (&dst_len);
+      if (!s_addr || !d_addr) {
+        return;
+      }
 
-    if (NULL == (src = this->db_->lookup (s_addr, src_len))) {
-      s_tmp = p.src_addr ();
-      src = &s_tmp;
-    }
-    if (NULL == (dst = this->db_->lookup (d_addr, dst_len))) {
-      d_tmp = p.dst_addr ();
-      dst = &d_tmp;
-    }
+      if (NULL == (src = this->db_->lookup (s_addr, src_len))) {
+        s_tmp = p.src_addr ();
+        src = &s_tmp;
+      }
+      if (NULL == (dst = this->db_->lookup (d_addr, dst_len))) {
+        d_tmp = p.dst_addr ();
+        dst = &d_tmp;
+      }
 
-    std::string proto = p.proto ();
-    printf ("%14.6f %s %s:%d -> %s:%d\n", p.ts (), proto.c_str (),
-            src->c_str (), p.src_port (), dst->c_str (), p.dst_port ());
+      this->hdlr_->flow (*src, *dst, p);
+    }
   }
+
+
+  void IPFlow::set_handler (dnshive::Handler *hdlr) {
+    this->hdlr_ = hdlr;
+  }
+  void IPFlow::unset_handler () {
+    this->hdlr_ = NULL;
+  }
+
 
 }  // namespace dnshive

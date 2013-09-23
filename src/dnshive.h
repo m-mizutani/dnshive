@@ -28,26 +28,23 @@
 #define __LIB_DNSHIVE_H__
 
 #include <swarm.h>
+#include <vector>
 
 namespace dnshive {
   class DnsFwdDB;
   class IPFlow;
-
-  class Flow {
-  };
-  class Entry {
-  };
-
+  
   class Handler {
-    virtual void update_dns_db (const std::string &name, const Entry &ent);
-    virtual void flow (const Flow &flow);
+  public:
+    virtual void flow (const std::string &src, const std::string &dst,
+                       const swarm::Property &prop) = 0;
   };
 
   class Hive {
   private:
     swarm::NetDec *nd_;
     DnsFwdDB *dns_db_;
-    IPFlow *ip4_flow_;
+    IPFlow *ip_flow_;
     std::string errmsg_;
 
   public:
@@ -56,6 +53,8 @@ namespace dnshive {
     bool capture (const std::string &arg, bool dev=true);
     bool enable_redis_db (const std::string &host, const std::string &port,
                           const std::string &db);
+    void set_handler (Handler *hdlr);
+    void unset_handler ();
     const std::string& errmsg () const;
   };
 }

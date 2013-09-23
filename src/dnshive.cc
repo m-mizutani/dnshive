@@ -34,57 +34,18 @@
 #include "debug.h"
 
 namespace dnshive {
-  /*
-  void capture (const std::string &dev, const std::string &filter = "") {
-    // ----------------------------------------------
-    // setup NetDec
-    swarm::NetDec *nd = new swarm::NetDec ();
-    DnsFwdDB *dns_db = new DnsFwdDB ();
-    IPFlow *ip4_flow = new IPFlow ();
-    ip4_flow->set_db (dns_db);
-
-    nd->set_handler ("dns.an", dns_db);
-    nd->set_handler ("ipv4.packet", ip4_flow);
-
-    swarm::NetCap *nc = new swarm::NetCap (nd);
-    if (!nc->capture (dev, filter)) {
-      printf ("error: %s\n", nc->errmsg ().c_str ());
-    }
-  }
-
-
-  void read_pcapfile (const std::string &fpath) {
-    printf ("open: \"%s\"\n", fpath.c_str ());
-
-    // ----------------------------------------------
-    // setup NetDec
-    ip4_flow->set_db (dns_db);
-
-    nd->set_handler ("dns.an", dns_db);
-    nd->set_handler ("ipv4.packet", ip4_flow);
-
-    // ----------------------------------------------
-    // processing packets from pcap file
-    swarm::NetCap *nc = new swarm::NetCap (nd);
-    if (!nc->read_pcapfile (fpath)) {
-      printf ("error: %s\n", nc->errmsg ().c_str ());
-    }
-
-    return;
-  }
-  */
-
   Hive::Hive () { 
     this->nd_ = new swarm::NetDec ();
     this->dns_db_ = new DnsFwdDB ();
-    this->ip4_flow_ = new IPFlow ();
-    this->ip4_flow_->set_db (this->dns_db_);
+    this->ip_flow_ = new IPFlow ();
+    this->ip_flow_->set_db (this->dns_db_);
     this->nd_->set_handler ("dns.an", this->dns_db_);
-    this->nd_->set_handler ("ipv4.packet", this->ip4_flow_);
+    this->nd_->set_handler ("ipv4.packet", this->ip_flow_);
+    this->nd_->set_handler ("ipv6.packet", this->ip_flow_);
   }
   Hive::~Hive () {
     delete this->nd_;
-    delete this->ip4_flow_;
+    delete this->ip_flow_;
     delete this->dns_db_;
   }
 
@@ -108,12 +69,19 @@ namespace dnshive {
                               const std::string &db) {
     if (this->dns_db_->enable_redis_db (host, port, db)) {
       int rc = this->dns_db_->load_redis_db ();
-      debug (1, "rc = %d", rc);
+      debug (0, "rc = %d", rc);
       return true;
     } else {
       this->errmsg_ = this->dns_db_->errmsg ();
       return false;
     }
+  }
+
+  void Hive::set_handler (Handler *hdlr) {
+    this->ip_flow_->set_handler (hdlr);
+  }
+  void Hive::unset_handler () {
+    this->ip_flow_->unset_handler ();
   }
 
   const std::string& Hive::errmsg () const {

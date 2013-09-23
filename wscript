@@ -120,6 +120,7 @@ def build(bld):
                 source = src_list,
                 target = 'dhive',
                 use = [target_name],
+                lib = main_lib,
                 includes = [inc_dir],
                 LIBDIR = [os.path.join (bld.env.PREFIX, 'lib')],
                 rpath = [os.path.join (bld.env.PREFIX, 'lib'),

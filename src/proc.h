@@ -29,6 +29,7 @@
 
 #include <swarm.h>
 #include <hiredis/hiredis.h>
+#include "./dnshive.h"
 
 namespace dnshive {
   class DnsFwdDB : public swarm::Handler {
@@ -53,10 +54,15 @@ namespace dnshive {
   class IPFlow : public swarm::Handler {
   private:
     DnsFwdDB * db_;
+    dnshive::Handler * hdlr_;
 
   public:
+    IPFlow ();
+    virtual ~IPFlow ();
     void set_db (DnsFwdDB *db);
     void recv (swarm::ev_id eid, const  swarm::Property &p);
+    void set_handler (dnshive::Handler *hdlr);
+    void unset_handler ();
   };
 }  // namespace dnshive
 
