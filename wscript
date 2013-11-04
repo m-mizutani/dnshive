@@ -69,6 +69,7 @@ def configure(conf):
         cxxflags.append ('-I{0}'.format (os.path.abspath (conf.options.incdir)))
     if conf.options.libdir is not None: 
         linkflags.append ('-L{0}'.format (os.path.abspath (conf.options.libdir)))
+        conf.env.append_value('LIBDIR', conf.options.libdir)
 
     conf.env.append_value('CXXFLAGS', cxxflags) 
     conf.env.append_value('INCLUDES', ['.', '%s/include' % conf.env.PREFIX])
@@ -85,7 +86,6 @@ def configure(conf):
         p = subprocess.Popen('gtest-config --libdir', shell=True, stdout=subprocess.PIPE)
         gtest_libpath = p.stdout.readline().strip ()
         p.wait ()
-        conf.env.append_value('LIBDIR', gtest_libpath)
         conf.check_cxx(lib = 'gtest', args = ['-lpthread'])
 
     conf.env.store('config.log')    
@@ -124,7 +124,7 @@ def build(bld):
                 includes = [inc_dir],
                 LIBDIR = [os.path.join (bld.env.PREFIX, 'lib')],
                 rpath = [os.path.join (bld.env.PREFIX, 'lib'),
-                         os.path.join (bld.path.abspath(), 'build')])
+                         os.path.join (bld.path.abspath(), 'build')] + bld.env.LIBDIR)
 
     bld.install_files('${PREFIX}/include', os.path.join ('src', lib_fname))
 
