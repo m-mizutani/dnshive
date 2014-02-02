@@ -35,20 +35,19 @@ Install
 
 Please install libpcap, redis-server, hiredis and msgpack based on your OS's architecture. An example of installation in Ubuntu is below.
 
-    % sudo aptitude install redis-server libhiredis0.10 libhiredis-dev libmsgpack-dev libmsgpack3 build-essential
+    % sudo aptitude install redis-server libhiredis0.10 libhiredis-dev libmsgpack-dev libmsgpack3 build-essential cmake
 
 ### Setup
 
     % git clone https://github.com/m-mizutani/swarm.git
     % cd swarm
-    % ./waf configure
-    % ./waf
+    % cmake . && make
     % cd ..
     % git clone https://github.com/m-mizutani/dnshive.git
     % cd dnshive
-    % ./waf configure --libdir=../swarm/build --incdir=../swarm/src
-    % ./waf
-    % sudo ./waf install
+    % cmake -DINC_DIR=../swarm/src -DLIB_DIR=../swarm/lib . 
+    % make
+    % sudo make install
 
 Usage
 --------------------------------------------

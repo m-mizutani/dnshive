@@ -54,13 +54,15 @@ int main (int argc, char *argv[]) {
   psr.add_option("-d").action("store").dest("redis_db")
     .metavar ("INT")
     .help("Redis DB Index (MUST be set if you want redis DB");
-  psr.add_option("-h").action("store").dest("redis_host")
+  psr.add_option("-s").action("store").dest("redis_host")
     .set_default ("localhost")
     .help("Reids DB Host, default is localhost");
   psr.add_option("-p").action("store").dest("redis_port")
     .set_default ("6379").metavar ("INT")
     .help("Reids DB Port, default is 6379");
-
+  psr.add_option("-q").action("store_true").dest("quiet")
+    .help("Quiet mode");
+  
   optparse::Values& opt = psr.parse_args(argc, argv);
   std::vector <std::string> args = psr.args();
 
@@ -76,17 +78,25 @@ int main (int argc, char *argv[]) {
     }
   }
 
+  if (opt.get("quiet")) {
+    h->unset_handler();
+  }
+
   if (opt.is_set ("interface")) {
     // monitoring network interface
     std::cerr << "Interface: " << opt["interface"] << std::endl;
-    h->capture (opt["interface"], true);  // dev = true
+    if (!h->capture (opt["interface"], true)) {  // dev = true
+      std::cerr << "Error: " << h->errmsg() << std::endl;
+    }
   } else {
     // reading files
     for (auto it = opt.all(od_file).begin ();
          it != opt.all(od_file).end (); it++) {
 
       std::cerr << "Read file: " << (*it) << std::endl;
-      h->capture (*it, false);  // dev = false
+      if (!h->capture (*it, false)) {
+        std::cerr << "Error: " << h->errmsg() << std::endl;
+      }
     }
   }
 

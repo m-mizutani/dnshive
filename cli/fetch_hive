@@ -6,24 +6,28 @@ import sys
 import socket
 
 def fetch ():
-    r = redis.Redis (host='127.0.0.1', port=6379, db=0)
+    r = redis.Redis (host='127.0.0.1', port=6379, db=1)
     obj = r.keys ('*')
     unpkr = msgpack.Unpacker()
-    
+
+    name_map = {}
+
     for k in obj:
         if len(k) == 4:    af = socket.AF_INET
         elif len(k) == 16: af = socket.AF_INET6
         else: continue  # unsupported address format
         addr = socket.inet_ntop (af, k)
-        print addr, '\t',
 
         names = []
         for m in r.lrange (k, 0, -1):
             data = msgpack.unpackb (m)
-            if 'name' in data: names.append (data['name'])
+            if 'name' in data: name_map.setdefault(data['name'], []).append(addr)
 
-        print list (set (names))
 
+    for name, addr_list in name_map.iteritems():
+        if '.' in name: name = '.'.join(reversed(name.split('.')))
+        print name, list(set(addr_list))            
+        # print name, list(set(addr_list))
 
 
 

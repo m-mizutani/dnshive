@@ -46,6 +46,7 @@ namespace dnshive {
     DnsFwdDB *dns_db_;
     IPFlow *ip_flow_;
     std::string errmsg_;
+    bool quiet_;
 
   public:
     Hive ();
@@ -55,6 +56,7 @@ namespace dnshive {
                           const std::string &db);
     void set_handler (Handler *hdlr);
     void unset_handler ();
+    void enable_quiet ();
     const std::string& errmsg () const;
   };
 }

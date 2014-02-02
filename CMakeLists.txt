@@ -15,3 +15,4 @@ FILE(GLOB BASESRCS "src/*.cc")
 ADD_EXECUTABLE(dnshive ${BASESRCS})
 TARGET_LINK_LIBRARIES(dnshive swarm hiredis msgpack)
 
+INSTALL (TARGETS dnshive DESTINATION bin)

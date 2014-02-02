@@ -163,7 +163,7 @@ namespace dnshive {
       std::string name = p.value("dns.an_name", i).repr();
       std::string type = p.value("dns.an_type", i).repr();
       std::string addr = p.value("dns.an_data", i).repr();
-      debug (DBG, "%s (%s) %s", name.c_str (), type.c_str (), addr.c_str ());
+      debug (1, "%s (%s) %s", name.c_str (), type.c_str (), addr.c_str ());
 
       size_t len;
       void * ptr = p.value("dns.an_data", i).ptr(&len);
@@ -228,7 +228,9 @@ namespace dnshive {
         dst = &d_tmp;
       }
 
-      this->hdlr_->flow (*src, *dst, p);
+      if (this->hdlr_) {
+        this->hdlr_->flow (*src, *dst, p);
+      }
     }
   }
 
