@@ -159,16 +159,14 @@ namespace dnshive {
     static const std::string k_src  = "src";
     static const std::string k_name = "name";
     
-    for (size_t i = 0; i < p.param ("dns.an_name")->size (); i++) {
-      std::string name = p.param ("dns.an_name")->repr (i);
-      std::string type = p.param ("dns.an_type")->repr (i);
-      std::string addr;
-
-      addr = p.param ("dns.an_data")->repr (i);
+    for (size_t i = 0; i < p.value_size("dns.an_name"); i++) {
+      std::string name = p.value("dns.an_name", i).repr();
+      std::string type = p.value("dns.an_type", i).repr();
+      std::string addr = p.value("dns.an_data", i).repr();
       debug (DBG, "%s (%s) %s", name.c_str (), type.c_str (), addr.c_str ());
 
       size_t len;
-      void * ptr = p.param ("dns.an_data")->get (&len, i);
+      void * ptr = p.value("dns.an_data", i).ptr(&len);
 
       if (ptr && (type == "A" || type == "AAAA")) {
         // register to in-memory DB

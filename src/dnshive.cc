@@ -50,18 +50,21 @@ namespace dnshive {
   }
 
   bool Hive::capture (const std::string &arg, bool dev) {
-    swarm::NetCap *nc = new swarm::NetCap (this->nd_);
-
+    swarm::NetCap *nc = NULL;
     if (dev) {
-      if (!nc->capture (arg)) {
-        printf ("error: %s\n", nc->errmsg ().c_str ());
-      }
+      nc = new swarm::CapPcapDev(arg);
     } else {
-      if (!nc->read_pcapfile (arg)) {
-        printf ("error: %s, %s\n", arg.c_str (), nc->errmsg ().c_str ());
-      }
+      nc = new swarm::CapPcapFile(arg);
     }
 
+    nc->bind_netdec(this->nd_);
+
+    if (!nc->ready()) {
+      this->errmsg_ = nc->errmsg();
+      return false;
+    }
+
+    nc->start();
     return true;
   }
 
