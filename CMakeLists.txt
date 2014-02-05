@@ -13,6 +13,6 @@ LINK_DIRECTORIES(${LIB_DIR})
 FILE(GLOB BASESRCS "src/*.cc")
 
 ADD_EXECUTABLE(dnshive ${BASESRCS})
-TARGET_LINK_LIBRARIES(dnshive swarm hiredis msgpack)
+TARGET_LINK_LIBRARIES(dnshive swarm hiredis msgpack zmq)
 
 INSTALL (TARGETS dnshive DESTINATION bin)

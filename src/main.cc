@@ -62,6 +62,9 @@ int main (int argc, char *argv[]) {
     .help("Reids DB Port, default is 6379");
   psr.add_option("-q").action("store_true").dest("quiet")
     .help("Quiet mode");
+  psr.add_option("-z").action("store").dest("zmq_addr")
+    .metavar ("STR")
+    .help("Enable ZeroMQ PUB address, such as '0.0.0.0:9000'");
   
   optparse::Values& opt = psr.parse_args(argc, argv);
   std::vector <std::string> args = psr.args();
@@ -75,6 +78,7 @@ int main (int argc, char *argv[]) {
     if (!h->enable_redis_db (opt["redis_host"], opt["redis_port"],
                              opt["redis_db"])) {
       std::cerr << "Error: " << h->errmsg () << std::endl;
+      return 1;
     }
   }
 
@@ -82,11 +86,19 @@ int main (int argc, char *argv[]) {
     h->unset_handler();
   }
 
+  if (opt.is_set("zmq_addr")) {
+    if (!h->enable_zmq(opt["zmq_addr"])) {
+      std::cerr << "Error: " << h->errmsg () << std::endl;
+      return 1;
+    } 
+  }
+
   if (opt.is_set ("interface")) {
     // monitoring network interface
     std::cerr << "Interface: " << opt["interface"] << std::endl;
     if (!h->capture (opt["interface"], true)) {  // dev = true
       std::cerr << "Error: " << h->errmsg() << std::endl;
+      return 1;
     }
   } else {
     // reading files
@@ -96,6 +108,7 @@ int main (int argc, char *argv[]) {
       std::cerr << "Read file: " << (*it) << std::endl;
       if (!h->capture (*it, false)) {
         std::cerr << "Error: " << h->errmsg() << std::endl;
+        return 1;
       }
     }
   }

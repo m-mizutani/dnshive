@@ -122,7 +122,7 @@ namespace dnshive {
         if(obj.via.map.size != 0) {
           msgpack::object_kv* p(obj.via.map.ptr);
           for(msgpack::object_kv* const pend(obj.via.map.ptr + obj.via.map.size);
-              p < pend; ++p) {
+              p && p < pend; ++p) {
             std::string k;
             p->key.convert (&k);
             if (k == "name") {
@@ -152,12 +152,40 @@ namespace dnshive {
     }
   }
 
-  void DnsFwdDB::recv (swarm::ev_id eid, const  swarm::Property &p) {
-    debug (DBG, "pkt recv");
+  void DnsFwdDB::insert(const std::string &name, const std::string &type,
+                        const std::string &addr, void *ptr, size_t len,
+                        double ts, const std::string &dst_addr) {
     static const std::string k_ts   = "ts";
     static const std::string k_type = "type";
     static const std::string k_src  = "src";
     static const std::string k_name = "name";
+
+    if (ptr && (type == "A" || type == "AAAA")) {
+      // register to in-memory DB
+      std::string key (static_cast<char*>(ptr), len);
+      this->rev_map_.insert (std::make_pair (key, name));
+
+      // register to redis
+      if (this->redis_ctx_) {
+        msgpack::sbuffer buf;
+        msgpack::packer <msgpack::sbuffer> pk (&buf);
+
+        pk.pack_map (4);
+        pk.pack (k_ts); pk.pack (ts);
+        pk.pack (k_src); pk.pack (dst_addr);  // Host that sent the query
+        pk.pack (k_type); pk.pack (type);
+        pk.pack (k_name); pk.pack (name);
+
+        void *com = redisCommand(this->redis_ctx_, 
+                                 "lpush %b %b", ptr, len, buf.data (), buf.size ());
+
+        freeReplyObject (com);
+      }
+    }
+  }
+  
+  void DnsFwdDB::recv (swarm::ev_id eid, const  swarm::Property &p) {
+    debug (DBG, "pkt recv");
     
     for (size_t i = 0; i < p.value_size("dns.an_name"); i++) {
       std::string name = p.value("dns.an_name", i).repr();
@@ -167,30 +195,9 @@ namespace dnshive {
 
       size_t len;
       void * ptr = p.value("dns.an_data", i).ptr(&len);
-
-      if (ptr && (type == "A" || type == "AAAA")) {
-        // register to in-memory DB
-        std::string key (static_cast<char*>(ptr), len);
-        this->rev_map_.insert (std::make_pair (key, name));
-
-        // register to redis
-        if (this->redis_ctx_) {
-          msgpack::sbuffer buf;
-          msgpack::packer <msgpack::sbuffer> pk (&buf);
-
-          pk.pack_map (4);
-          pk.pack (k_ts); pk.pack (p.ts ());
-          pk.pack (k_src); pk.pack (p.dst_addr ());  // Host that sent the query
-          pk.pack (k_type); pk.pack (type);
-          pk.pack (k_name); pk.pack (name);
-
-          void *com = redisCommand(this->redis_ctx_, 
-                                   "lpush %b %b", ptr, len, buf.data (), buf.size ());
-
-          freeReplyObject (com);
-        }
-      }
+      this->insert(name, type, addr, ptr, len, p.ts(), p.dst_addr());
     }
+
     return;
   }
 

@@ -40,6 +40,9 @@ namespace dnshive {
     redisContext *redis_ctx_;
     std::string errmsg_;
 
+    void insert(const std::string &name, const std::string &type,
+                const std::string &addr, void *ptr, size_t len,
+                double ts, const std::string &dst_addr);
   public:
     DnsFwdDB ();
     ~DnsFwdDB ();

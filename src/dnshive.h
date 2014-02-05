@@ -29,6 +29,7 @@
 
 #include <swarm.h>
 #include <vector>
+#include <zmq.hpp>
 
 namespace dnshive {
   class DnsFwdDB;
@@ -47,6 +48,8 @@ namespace dnshive {
     IPFlow *ip_flow_;
     std::string errmsg_;
     bool quiet_;
+    zmq::context_t zmq_ctx_;
+    zmq::socket_t *zmq_sock_;
 
   public:
     Hive ();
@@ -54,6 +57,7 @@ namespace dnshive {
     bool capture (const std::string &arg, bool dev=true);
     bool enable_redis_db (const std::string &host, const std::string &port,
                           const std::string &db);
+    bool enable_zmq (const std::string &addr);
     void set_handler (Handler *hdlr);
     void unset_handler ();
     void enable_quiet ();

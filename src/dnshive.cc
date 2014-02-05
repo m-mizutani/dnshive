@@ -27,19 +27,21 @@
 #include <sys/types.h>
 #include <swarm.h>
 #include <map>
-
+#include <sstream>
 
 #include "dnshive.h"
 #include "proc.h"
 #include "debug.h"
 
 namespace dnshive {
-  Hive::Hive () : quiet_(false) { 
+  Hive::Hive () : quiet_(false), zmq_ctx_(5), zmq_sock_(NULL) { 
     this->nd_ = new swarm::NetDec ();
     this->dns_db_ = new DnsFwdDB ();
     this->ip_flow_ = new IPFlow ();
     this->ip_flow_->set_db (this->dns_db_);
     this->nd_->set_handler ("dns.an", this->dns_db_);
+    this->nd_->set_handler ("mdns.an", this->dns_db_);
+    this->nd_->set_handler ("llmnr.an", this->dns_db_);
     this->nd_->set_handler ("ipv4.packet", this->ip_flow_);
     this->nd_->set_handler ("ipv6.packet", this->ip_flow_);
   }
@@ -47,6 +49,7 @@ namespace dnshive {
     delete this->nd_;
     delete this->ip_flow_;
     delete this->dns_db_;
+    delete this->zmq_sock_;
   }
 
   bool Hive::capture (const std::string &arg, bool dev) {
@@ -78,6 +81,20 @@ namespace dnshive {
       this->errmsg_ = this->dns_db_->errmsg ();
       return false;
     }
+  }
+
+  bool Hive::enable_zmq (const std::string &addr) {
+    std::stringstream ss;
+    ss <<  "tcp://" << addr;
+    this->zmq_sock_ = new zmq::socket_t (this->zmq_ctx_, ZMQ_PUB);
+    try {
+      this->zmq_sock_->bind(ss.str().c_str());
+    } catch (zmq::error_t &e) {
+      this->errmsg_ = e.what();
+      return false;
+    }
+    
+    return true;
   }
 
   void Hive::set_handler (Handler *hdlr) {
