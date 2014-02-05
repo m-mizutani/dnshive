@@ -34,7 +34,7 @@
 #include "debug.h"
 
 namespace dnshive {
-  Hive::Hive () : quiet_(false), zmq_ctx_(5), zmq_sock_(NULL) { 
+  Hive::Hive () : quiet_(false) { 
     this->nd_ = new swarm::NetDec ();
     this->dns_db_ = new DnsFwdDB ();
     this->ip_flow_ = new IPFlow ();
@@ -49,7 +49,6 @@ namespace dnshive {
     delete this->nd_;
     delete this->ip_flow_;
     delete this->dns_db_;
-    delete this->zmq_sock_;
   }
 
   bool Hive::capture (const std::string &arg, bool dev) {
@@ -84,18 +83,14 @@ namespace dnshive {
   }
 
   bool Hive::enable_zmq (const std::string &addr) {
-    std::stringstream ss;
-    ss <<  "tcp://" << addr;
-    this->zmq_sock_ = new zmq::socket_t (this->zmq_ctx_, ZMQ_PUB);
-    try {
-      this->zmq_sock_->bind(ss.str().c_str());
-    } catch (zmq::error_t &e) {
-      this->errmsg_ = e.what();
+    if (!this->dns_db_->enable_zmq(addr)) {
+      this->errmsg_ = this->dns_db_->errmsg ();
       return false;
     }
-    
+
     return true;
   }
+
 
   void Hive::set_handler (Handler *hdlr) {
     this->ip_flow_->set_handler (hdlr);

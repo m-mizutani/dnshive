@@ -36,8 +36,13 @@ namespace dnshive {
   private:
     static const std::string REDIS_HOST_;
     static const int REDIS_PORT_;
+    static const int ZMQ_IO_THREAT_;
+
     std::map <std::string, std::string> rev_map_;
     redisContext *redis_ctx_;
+    zmq::context_t zmq_ctx_;
+    zmq::socket_t *zmq_sock_;
+
     std::string errmsg_;
 
     void insert(const std::string &name, const std::string &type,
@@ -50,6 +55,7 @@ namespace dnshive {
     void recv (swarm::ev_id eid, const  swarm::Property &p);
     bool enable_redis_db (const std::string &host, const std::string &port,
                           const std::string &db);
+    bool enable_zmq (const std::string &addr);
     int load_redis_db ();
     const std::string &errmsg () const;
   };

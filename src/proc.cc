@@ -27,6 +27,7 @@
 #include <string.h>
 #include <msgpack.hpp>
 #include <iostream>
+#include <sstream>
 
 #include "proc.h"
 #include "debug.h"
@@ -34,14 +35,16 @@
 namespace dnshive {
   const std::string DnsFwdDB::REDIS_HOST_ = "localhost";
   const int DnsFwdDB::REDIS_PORT_ = 6379;
+  const int DnsFwdDB::ZMQ_IO_THREAT_ = 5;
   const bool DBG = false;
 
-  DnsFwdDB::DnsFwdDB () : redis_ctx_(NULL) {
+  DnsFwdDB::DnsFwdDB () : redis_ctx_(NULL), zmq_ctx_(ZMQ_IO_THREAT_), zmq_sock_(NULL) {
   }
   DnsFwdDB::~DnsFwdDB () {
     if (this->redis_ctx_) {
       redisFree (this->redis_ctx_);
     }
+    delete this->zmq_sock_;
   }
 
   bool DnsFwdDB::enable_redis_db (const std::string &host, const std::string &port,
@@ -141,6 +144,21 @@ namespace dnshive {
     return rc;
   }
 
+  bool DnsFwdDB::enable_zmq(const std::string &addr) {
+    std::stringstream ss;
+    ss <<  "tcp://" << addr;
+    this->zmq_sock_ = new zmq::socket_t (this->zmq_ctx_, ZMQ_PUB);
+    try {
+      this->zmq_sock_->bind(ss.str().c_str());
+    } catch (zmq::error_t &e) {
+      this->errmsg_ = e.what();
+      return false;
+    }
+    
+    return true;
+  }
+
+
 
   const std::string * DnsFwdDB::lookup (void * addr, size_t len) {
     std::string key (static_cast<char *>(addr), len);
@@ -159,27 +177,40 @@ namespace dnshive {
     static const std::string k_type = "type";
     static const std::string k_src  = "src";
     static const std::string k_name = "name";
+    static const std::string k_addr = "addr";
 
     if (ptr && (type == "A" || type == "AAAA")) {
       // register to in-memory DB
       std::string key (static_cast<char*>(ptr), len);
       this->rev_map_.insert (std::make_pair (key, name));
 
+      // create msgpack object
+      msgpack::sbuffer buf;
+      msgpack::packer <msgpack::sbuffer> pk (&buf);
+
+      pk.pack_map (5);
+      pk.pack (k_ts); pk.pack (ts);
+      pk.pack (k_src); pk.pack (dst_addr);  // Host that sent the query
+      pk.pack (k_type); pk.pack (type);
+      pk.pack (k_name); pk.pack (name);
+      pk.pack (k_addr); pk.pack (addr);
+
       // register to redis
       if (this->redis_ctx_) {
-        msgpack::sbuffer buf;
-        msgpack::packer <msgpack::sbuffer> pk (&buf);
-
-        pk.pack_map (4);
-        pk.pack (k_ts); pk.pack (ts);
-        pk.pack (k_src); pk.pack (dst_addr);  // Host that sent the query
-        pk.pack (k_type); pk.pack (type);
-        pk.pack (k_name); pk.pack (name);
-
         void *com = redisCommand(this->redis_ctx_, 
                                  "lpush %b %b", ptr, len, buf.data (), buf.size ());
-
         freeReplyObject (com);
+      }
+
+      // publish zmq message
+      if (this->zmq_sock_) {
+        zmq::message_t message(buf.size());
+        ::memcpy(message.data(), buf.data(), buf.size());
+        try {
+          this->zmq_sock_->send(message);
+        } catch (zmq::error_t &e) {
+          std::cerr << e.what() << std::endl;
+        }
       }
     }
   }

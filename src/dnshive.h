@@ -48,8 +48,6 @@ namespace dnshive {
     IPFlow *ip_flow_;
     std::string errmsg_;
     bool quiet_;
-    zmq::context_t zmq_ctx_;
-    zmq::socket_t *zmq_sock_;
 
   public:
     Hive ();
