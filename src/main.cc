@@ -27,53 +27,12 @@
 #include <dnshive.h>
 #include "./optparse.h"
 
-class PktHandler : public dnshive::Handler {
- public:
-  PktHandler() {
-  }
-  virtual ~PktHandler() {
-  }
-  
-  void flow (const std::string &src, const std::string &dst,
-             const swarm::Property &prop) {
-    std::string proto = prop.proto ();
-    printf ("%14.6f %s %s/%d -> %s/%d %d length\n", prop.ts (), proto.c_str (),
-            src.c_str (), prop.src_port (), dst.c_str (), prop.dst_port (),
-            prop.len ());
-  }
-};
-
-int main (int argc, char *argv[]) {
-  // Handling command line arguments
-  const std::string &od_file = "read_file";
-  optparse::OptionParser psr = optparse::OptionParser();
-  psr.add_option("-r").action("append").dest(od_file)
-    .help("Specify read pcap format file(s)");
-  psr.add_option("-i").action("store").dest("interface")
-    .help("Specify interface to monitor on the fly");
-  psr.add_option("-d").action("store").dest("redis_db")
-    .metavar ("INT")
-    .help("Redis DB Index (MUST be set if you want redis DB");
-  psr.add_option("-s").action("store").dest("redis_host")
-    .set_default ("localhost")
-    .help("Reids DB Host, default is localhost");
-  psr.add_option("-p").action("store").dest("redis_port")
-    .set_default ("6379").metavar ("INT")
-    .help("Reids DB Port, default is 6379");
-  psr.add_option("-q").action("store_true").dest("quiet")
-    .help("Quiet mode");
-  psr.add_option("-z").action("store").dest("zmq_addr")
-    .metavar ("STR")
-    .help("Enable ZeroMQ PUB address, such as '0.0.0.0:9000'");
-  
-  optparse::Values& opt = psr.parse_args(argc, argv);
-  std::vector <std::string> args = psr.args();
+int run(const optparse::Values &opt, const std::vector<std::string> &args) {
 
   // Preparing DnsHive instance
   dnshive::Hive *h = new dnshive::Hive ();
-  PktHandler * ph = new PktHandler ();
-  h->set_handler (ph);
 
+  // Enable redis DB
   if (opt.is_set ("redis_db")) {
     if (!h->enable_redis_db (opt["redis_host"], opt["redis_port"],
                              opt["redis_db"])) {
@@ -86,6 +45,7 @@ int main (int argc, char *argv[]) {
     h->unset_handler();
   }
 
+  // Enable ZeroMQ PUB server
   if (opt.is_set("zmq_addr")) {
     if (!h->enable_zmq(opt["zmq_addr"])) {
       std::cerr << "Error: " << h->errmsg () << std::endl;
@@ -100,10 +60,10 @@ int main (int argc, char *argv[]) {
       std::cerr << "Error: " << h->errmsg() << std::endl;
       return 1;
     }
-  } else {
+  } else if (opt.is_set("read_file")) {
     // reading files
-    for (auto it = opt.all(od_file).begin ();
-         it != opt.all(od_file).end (); it++) {
+    for (auto it = opt.all("read_file").begin ();
+         it != opt.all("read_file").end (); it++) {
 
       std::cerr << "Read file: " << (*it) << std::endl;
       if (!h->capture (*it, false)) {
@@ -111,7 +71,44 @@ int main (int argc, char *argv[]) {
         return 1;
       }
     }
+  } else {
+    std::cerr << "No file and interface to capture. exiting..." << std::endl;
   }
 
   return 0;
 }
+
+int main (int argc, char *argv[]) {
+  // Handling command line arguments
+  optparse::OptionParser psr = optparse::OptionParser();
+  psr.add_option("-r").action("append").dest("read_file")
+    .help("Specify read pcap format file(s)");
+  psr.add_option("-i").action("store").dest("interface")
+    .help("Specify interface to monitor on the fly");
+
+  // Options for redis DB
+  psr.add_option("-d").action("store").dest("redis_db")
+    .metavar ("INT")
+    .help("Enable redis DB and specify Index (MUST be set if you want redis DB");
+  psr.add_option("-s").action("store").dest("redis_host")
+    .set_default ("localhost")
+    .help("Reids DB Host, default is localhost");
+  psr.add_option("-p").action("store").dest("redis_port")
+    .set_default ("6379").metavar ("INT")
+    .help("Reids DB Port, default is 6379");
+
+  // Options for ZeroMQ
+  psr.add_option("-z").action("store").dest("zmq_addr")
+    .metavar ("STR")
+    .help("Enable ZeroMQ PUB address, such as '*:9000'");
+
+
+  psr.add_option("-q").action("store_true").dest("quiet")
+    .help("Quiet mode");
+
+  optparse::Values& opt = psr.parse_args(argc, argv);
+  std::vector <std::string> args = psr.args();
+  int rc = (0 == run(opt, args)) ? EXIT_SUCCESS : EXIT_FAILURE;
+  ::exit(rc);
+}
+

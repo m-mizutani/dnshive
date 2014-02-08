@@ -56,6 +56,7 @@ namespace dnshive {
 
     if (*e != '\0') {
       this->errmsg_ = "port number \"" + port + "\" should be digit";
+      rc = false;
     } else {
       // connect to redis server
       this->redis_ctx_ = redisConnect(host.c_str (), p);
