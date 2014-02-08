@@ -24,56 +24,43 @@
  * POSSIBILITY OF SUCH DAMAGE.
  */
 
-#ifndef SRC__HANDLER__
-#define SRC__HANDLER__
+#ifndef __LIB_DNSHIVE_H__
+#define __LIB_DNSHIVE_H__
 
 #include <swarm.h>
-#include <hiredis/hiredis.h>
-#include "./dnshive.h"
+#include <vector>
+#include <zmq.hpp>
 
 namespace dnshive {
-  class DnsFwdDB : public swarm::Handler {
-  private:
-    static const std::string REDIS_HOST_;
-    static const int REDIS_PORT_;
-    static const int ZMQ_IO_THREAT_;
-
-    std::map <std::string, std::string> rev_map_;
-    redisContext *redis_ctx_;
-    zmq::context_t zmq_ctx_;
-    zmq::socket_t *zmq_sock_;
-
-    std::string errmsg_;
-
-    void insert(const std::string &name, const std::string &type,
-                const std::string &addr, void *ptr, size_t len,
-                double ts, const std::string &dst_addr);
+  class DnsDB;
+  class FlowHandler;
+  
+  class Handler {
   public:
-    DnsFwdDB ();
-    ~DnsFwdDB ();
-    const std::string * lookup (void * addr, size_t len);
-    void recv (swarm::ev_id eid, const  swarm::Property &p);
+    virtual void flow (const std::string &src, const std::string &dst,
+                       const swarm::Property &prop) = 0;
+  };
+
+  class Hive {
+  private:
+    swarm::NetDec *nd_;
+    DnsDB *dns_db_;
+    FlowHandler *ip_flow_;
+    std::string errmsg_;
+    bool quiet_;
+
+  public:
+    Hive ();
+    ~Hive ();
+    bool capture (const std::string &arg, bool dev=true);
     bool enable_redis_db (const std::string &host, const std::string &port,
                           const std::string &db);
     bool enable_zmq (const std::string &addr);
-    int load_redis_db ();
-    const std::string &errmsg () const;
-  };
-
-  class IPFlow : public swarm::Handler {
-  private:
-    DnsFwdDB * db_;
-    dnshive::Handler * hdlr_;
-
-  public:
-    IPFlow ();
-    virtual ~IPFlow ();
-    void set_db (DnsFwdDB *db);
-    void recv (swarm::ev_id eid, const  swarm::Property &p);
-    void set_handler (dnshive::Handler *hdlr);
+    void set_handler (Handler *hdlr);
     void unset_handler ();
+    void enable_quiet ();
+    const std::string& errmsg () const;
   };
-}  // namespace dnshive
+}
 
-#endif  // SRC__HANDLER__
-
+#endif

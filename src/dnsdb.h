@@ -24,43 +24,43 @@
  * POSSIBILITY OF SUCH DAMAGE.
  */
 
-#ifndef __LIB_DNSHIVE_H__
-#define __LIB_DNSHIVE_H__
+#ifndef SRC__DNSDB__
+#define SRC__DNSDB__
 
 #include <swarm.h>
-#include <vector>
-#include <zmq.hpp>
+#include <hiredis/hiredis.h>
+#include "./hive.h"
 
 namespace dnshive {
-  class DnsFwdDB;
-  class IPFlow;
-  
-  class Handler {
-  public:
-    virtual void flow (const std::string &src, const std::string &dst,
-                       const swarm::Property &prop) = 0;
-  };
-
-  class Hive {
+  class DnsDB : public swarm::Handler {
   private:
-    swarm::NetDec *nd_;
-    DnsFwdDB *dns_db_;
-    IPFlow *ip_flow_;
-    std::string errmsg_;
-    bool quiet_;
+    static const std::string REDIS_HOST_;
+    static const int REDIS_PORT_;
+    static const int ZMQ_IO_THREAT_;
 
+    std::map <std::string, std::string> rev_map_;
+    redisContext *redis_ctx_;
+    zmq::context_t zmq_ctx_;
+    zmq::socket_t *zmq_sock_;
+
+    std::string errmsg_;
+
+    void insert(const std::string &name, const std::string &type,
+                const std::string &addr, void *ptr, size_t len,
+                double ts, const std::string &dst_addr);
   public:
-    Hive ();
-    ~Hive ();
-    bool capture (const std::string &arg, bool dev=true);
+    DnsDB ();
+    ~DnsDB ();
+    const std::string * lookup (void * addr, size_t len);
+    void recv (swarm::ev_id eid, const  swarm::Property &p);
     bool enable_redis_db (const std::string &host, const std::string &port,
                           const std::string &db);
     bool enable_zmq (const std::string &addr);
-    void set_handler (Handler *hdlr);
-    void unset_handler ();
-    void enable_quiet ();
-    const std::string& errmsg () const;
+    int load_redis_db ();
+    const std::string &errmsg () const;
   };
-}
 
-#endif
+}  // namespace dnshive
+
+#endif  // SRC__DNSDB__
+

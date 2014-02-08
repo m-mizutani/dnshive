@@ -29,25 +29,25 @@
 #include <iostream>
 #include <sstream>
 
-#include "proc.h"
+#include "dnsdb.h"
 #include "debug.h"
 
 namespace dnshive {
-  const std::string DnsFwdDB::REDIS_HOST_ = "localhost";
-  const int DnsFwdDB::REDIS_PORT_ = 6379;
-  const int DnsFwdDB::ZMQ_IO_THREAT_ = 5;
+  const std::string DnsDB::REDIS_HOST_ = "localhost";
+  const int DnsDB::REDIS_PORT_ = 6379;
+  const int DnsDB::ZMQ_IO_THREAT_ = 5;
   const bool DBG = false;
 
-  DnsFwdDB::DnsFwdDB () : redis_ctx_(NULL), zmq_ctx_(ZMQ_IO_THREAT_), zmq_sock_(NULL) {
+  DnsDB::DnsDB () : redis_ctx_(NULL), zmq_ctx_(ZMQ_IO_THREAT_), zmq_sock_(NULL) {
   }
-  DnsFwdDB::~DnsFwdDB () {
+  DnsDB::~DnsDB () {
     if (this->redis_ctx_) {
       redisFree (this->redis_ctx_);
     }
     delete this->zmq_sock_;
   }
 
-  bool DnsFwdDB::enable_redis_db (const std::string &host, const std::string &port,
+  bool DnsDB::enable_redis_db (const std::string &host, const std::string &port,
                                   const std::string &db) {
     bool rc = true;
 
@@ -92,7 +92,7 @@ namespace dnshive {
     return rc;
   }
 
-  int DnsFwdDB::load_redis_db () {
+  int DnsDB::load_redis_db () {
     struct redisReply * com = static_cast<struct redisReply *>
       (redisCommand(this->redis_ctx_, "keys *"));
 
@@ -145,7 +145,7 @@ namespace dnshive {
     return rc;
   }
 
-  bool DnsFwdDB::enable_zmq(const std::string &addr) {
+  bool DnsDB::enable_zmq(const std::string &addr) {
     std::stringstream ss;
     ss <<  "tcp://" << addr;
     this->zmq_sock_ = new zmq::socket_t (this->zmq_ctx_, ZMQ_PUB);
@@ -161,7 +161,7 @@ namespace dnshive {
 
 
 
-  const std::string * DnsFwdDB::lookup (void * addr, size_t len) {
+  const std::string * DnsDB::lookup (void * addr, size_t len) {
     std::string key (static_cast<char *>(addr), len);
     auto it = this->rev_map_.find (key);
     if (it == this->rev_map_.end ()) {
@@ -171,7 +171,7 @@ namespace dnshive {
     }
   }
 
-  void DnsFwdDB::insert(const std::string &name, const std::string &type,
+  void DnsDB::insert(const std::string &name, const std::string &type,
                         const std::string &addr, void *ptr, size_t len,
                         double ts, const std::string &dst_addr) {
     static const std::string k_ts   = "ts";
@@ -216,7 +216,7 @@ namespace dnshive {
     }
   }
   
-  void DnsFwdDB::recv (swarm::ev_id eid, const  swarm::Property &p) {
+  void DnsDB::recv (swarm::ev_id eid, const  swarm::Property &p) {
     debug (DBG, "pkt recv");
     
     for (size_t i = 0; i < p.value_size("dns.an_name"); i++) {
@@ -233,53 +233,10 @@ namespace dnshive {
     return;
   }
 
-  const std::string &DnsFwdDB::errmsg () const {
+  const std::string &DnsDB::errmsg () const {
     return this->errmsg_;
   }
 
-
-  IPFlow::IPFlow () : hdlr_(NULL) {
-  }
-  IPFlow::~IPFlow () {
-  }
-
-  void IPFlow::set_db (DnsFwdDB *db) {
-    this->db_ = db;
-  }
-
-  void IPFlow::recv (swarm::ev_id eid, const  swarm::Property &p) {
-    if (this->hdlr_) {
-      std::string s_tmp, d_tmp;
-      const std::string *src, *dst;
-      size_t src_len, dst_len;
-      void *s_addr = p.src_addr (&src_len);
-      void *d_addr = p.dst_addr (&dst_len);
-      if (!s_addr || !d_addr) {
-        return;
-      }
-
-      if (NULL == (src = this->db_->lookup (s_addr, src_len))) {
-        s_tmp = p.src_addr ();
-        src = &s_tmp;
-      }
-      if (NULL == (dst = this->db_->lookup (d_addr, dst_len))) {
-        d_tmp = p.dst_addr ();
-        dst = &d_tmp;
-      }
-
-      if (this->hdlr_) {
-        this->hdlr_->flow (*src, *dst, p);
-      }
-    }
-  }
-
-
-  void IPFlow::set_handler (dnshive::Handler *hdlr) {
-    this->hdlr_ = hdlr;
-  }
-  void IPFlow::unset_handler () {
-    this->hdlr_ = NULL;
-  }
 
 
 }  // namespace dnshive

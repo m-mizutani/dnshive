@@ -24,7 +24,7 @@
  * POSSIBILITY OF SUCH DAMAGE.
  */
 
-#include <dnshive.h>
+#include <hive.h>
 #include "./optparse.h"
 
 int run(const optparse::Values &opt, const std::vector<std::string> &args) {
@@ -42,7 +42,7 @@ int run(const optparse::Values &opt, const std::vector<std::string> &args) {
   }
 
   if (opt.get("quiet")) {
-    h->unset_handler();
+    // -----
   }
 
   // Enable ZeroMQ PUB server

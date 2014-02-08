@@ -29,15 +29,16 @@
 #include <map>
 #include <sstream>
 
-#include "dnshive.h"
-#include "proc.h"
+#include "hive.h"
+#include "dnsdb.h"
+#include "flow.h"
 #include "debug.h"
 
 namespace dnshive {
   Hive::Hive () : quiet_(false) { 
     this->nd_ = new swarm::NetDec ();
-    this->dns_db_ = new DnsFwdDB ();
-    this->ip_flow_ = new IPFlow ();
+    this->dns_db_ = new DnsDB ();
+    this->ip_flow_ = new FlowHandler ();
     this->ip_flow_->set_db (this->dns_db_);
     this->nd_->set_handler ("dns.an", this->dns_db_);
     this->nd_->set_handler ("mdns.an", this->dns_db_);
@@ -92,12 +93,6 @@ namespace dnshive {
   }
 
 
-  void Hive::set_handler (Handler *hdlr) {
-    this->ip_flow_->set_handler (hdlr);
-  }
-  void Hive::unset_handler () {
-    this->ip_flow_->unset_handler ();
-  }
   void Hive::enable_quiet () {
     this->quiet_ = true;
   }
