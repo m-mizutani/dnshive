@@ -151,7 +151,13 @@ namespace dnshive {
     if (it == this->rev_map_.end ()) {
       return NULL;
     } else {
-      return &(it->second);
+      const std::string &name = (it->second);
+      auto cit = this->cname_map_.find(name);
+      if (cit != this->cname_map_.end()) {
+        return &(it->second);
+      } else {
+        return &name;
+      }
     }
   }
 
@@ -164,7 +170,15 @@ namespace dnshive {
     static const std::string k_name = "name";
     static const std::string k_addr = "addr";
 
-    if (ptr && (type == "A" || type == "AAAA")) {
+    if (!ptr) {
+      return;
+    }
+
+    if (type == "CNAME") {
+      this->cname_map_.insert(std::make_pair(addr, name));
+    }
+
+    if (type == "A" || type == "AAAA") {
       // register to in-memory DB
       std::string key (static_cast<char*>(ptr), len);
       this->rev_map_.insert (std::make_pair (key, name));
@@ -186,7 +200,9 @@ namespace dnshive {
                                  "lpush %b %b", ptr, len, buf.data (), buf.size ());
         freeReplyObject (com);
       }
+    }
 
+    if (type == "A" || type == "AAAA" || type == "CNAME") {
       // publish zmq message
       if (this->output_) {
         this->output_->dns_answer(ts, name, type, addr, dst_addr);

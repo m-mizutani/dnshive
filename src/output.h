@@ -40,7 +40,7 @@ namespace dnshive {
     static const std::string k_type;
     static const std::string k_src;
     static const std::string k_name;
-    static const std::string k_addr;
+    static const std::string k_res;
     static const std::string k_client;
     static const std::string k_server;
 

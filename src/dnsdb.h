@@ -40,6 +40,7 @@ namespace dnshive {
     static const int REDIS_PORT_;
     static const int ZMQ_IO_THREAT_;
 
+    std::map <std::string, std::string> cname_map_;
     std::map <std::string, std::string> rev_map_;
     redisContext *redis_ctx_;
     Output *output_;

@@ -56,7 +56,7 @@ namespace dnshive {
   const std::string Output::k_type   = "type";
   const std::string Output::k_src    = "src";
   const std::string Output::k_name   = "name";
-  const std::string Output::k_addr   = "addr";
+  const std::string Output::k_res    = "res";
   const std::string Output::k_client = "client";
   const std::string Output::k_server = "server";
 
@@ -65,12 +65,18 @@ namespace dnshive {
     msgpack::sbuffer buf;
     msgpack::packer <msgpack::sbuffer> pk (&buf);
     pk.pack_map (6);
-    pk.pack (k_event); pk.pack (std::string("dns.answer"));
+    if (type == "A" || type == "AAAA") {
+      pk.pack (k_event); pk.pack (std::string("dns:address"));
+    } else if (type == "CNAME") {
+      pk.pack (k_event); pk.pack (std::string("dns:cname"));
+    } else {
+      assert(0);
+    }
     pk.pack (k_ts); pk.pack (ts);
     pk.pack (k_src); pk.pack (dst_addr);  // Host that sent the query
     pk.pack (k_type); pk.pack (type);
     pk.pack (k_name); pk.pack (name);
-    pk.pack (k_addr); pk.pack (addr);
+    pk.pack (k_res);  pk.pack (addr);
     this->zmq_pub(buf);
   }
 
@@ -78,7 +84,7 @@ namespace dnshive {
     msgpack::sbuffer buf;
     msgpack::packer <msgpack::sbuffer> pk (&buf);
     pk.pack_map (6);
-    pk.pack (k_event); pk.pack (std::string("new"));
+    pk.pack (k_event); pk.pack (std::string("flow:new"));
     pk.pack (k_ts); pk.pack (f.base_ts());
     pk.pack (k_client); pk.pack (f.c_name());  // Host that sent the query
     pk.pack (std::string("c_port")); pk.pack (f.c_port());
@@ -91,7 +97,7 @@ namespace dnshive {
     msgpack::sbuffer buf;
     msgpack::packer <msgpack::sbuffer> pk (&buf);
     pk.pack_map (10);
-    pk.pack (k_event); pk.pack (std::string("end"));
+    pk.pack (k_event); pk.pack (std::string("flow:end"));
     pk.pack (k_ts); pk.pack (f.base_ts());
     pk.pack (k_client); pk.pack (f.c_name());  // Host that sent the query
     pk.pack (std::string("c_size")); pk.pack (f.c_size());
