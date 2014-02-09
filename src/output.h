@@ -31,6 +31,11 @@
 #include <zmq.hpp>
 #include <msgpack.hpp>
 
+#include <fstream>
+#include <iostream>
+
+
+
 namespace dnshive {
   class Flow;
   class Output {
@@ -47,13 +52,17 @@ namespace dnshive {
     static const int ZMQ_IO_THREAD_ ;
     zmq::context_t zmq_ctx_;
     zmq::socket_t *zmq_sock_;
+    bool enable_msgpack_ofs_;
+    std::ofstream ofs_;
     std::string errmsg_;
     void zmq_pub(const msgpack::sbuffer &buf);
-
+    void write_stream(const msgpack::sbuffer &buf);
+    
   public:
     Output();
     ~Output();
     bool enable_zmq (const std::string &addr);
+    bool enable_msgpack_ofs (const std::string &path);
     const std::string &errmsg() const { return this->errmsg_; }
     void dns_answer(double ts, const std::string &name, const std::string &type,
                     const std::string &addr, const std::string &dst_addr);

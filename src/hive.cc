@@ -97,6 +97,15 @@ namespace dnshive {
     return true;
   }
 
+  bool Hive::enable_msgpack_ofs (const std::string &addr) {
+    if (!this->output_->enable_msgpack_ofs(addr)) {
+      this->errmsg_ = this->output_->errmsg ();
+      return false;
+    }
+
+    return true;
+  }
+
 
   void Hive::enable_quiet () {
     this->quiet_ = true;

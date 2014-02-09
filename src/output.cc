@@ -31,10 +31,14 @@
 
 namespace dnshive {
   const int Output::ZMQ_IO_THREAD_ = 5;
-  Output::Output() : zmq_ctx_(ZMQ_IO_THREAD_), zmq_sock_(NULL) {
+  Output::Output() : zmq_ctx_(ZMQ_IO_THREAD_), zmq_sock_(NULL), 
+                     enable_msgpack_ofs_(false) {
   }
   Output::~Output() {
     delete this->zmq_sock_;
+    if (this->enable_msgpack_ofs_) {
+      this->ofs_.close();
+    }
   }
 
   bool Output::enable_zmq(const std::string &addr) {
@@ -48,6 +52,17 @@ namespace dnshive {
       return false;
     }
     
+    return true;
+  }
+
+  bool Output::enable_msgpack_ofs(const std::string &path) {
+    try {
+      this->ofs_.open(path, std::ios::binary);
+    } catch (std::ios_base::failure &e) {
+      this->errmsg_ = e.what();
+      return false;
+    }
+    this->enable_msgpack_ofs_ = true;
     return true;
   }
 
@@ -77,6 +92,8 @@ namespace dnshive {
     pk.pack (k_type); pk.pack (type);
     pk.pack (k_name); pk.pack (name);
     pk.pack (k_res);  pk.pack (addr);
+
+    this->write_stream(buf);
     this->zmq_pub(buf);
   }
 
@@ -91,6 +108,7 @@ namespace dnshive {
     pk.pack (k_server); pk.pack (f.s_name());
     pk.pack (std::string("s_port")); pk.pack (f.s_port());
 
+    this->write_stream(buf);
     this->zmq_pub(buf);
   }
   void Output::expire_flow(const Flow &f) {
@@ -108,7 +126,14 @@ namespace dnshive {
     pk.pack (std::string("s_pkt")); pk.pack (f.s_pkt());
     pk.pack (std::string("s_port")); pk.pack (f.s_port());
 
+    this->write_stream(buf);
     this->zmq_pub(buf);
+  }
+
+  void Output::write_stream(const msgpack::sbuffer &buf) {
+    if (this->enable_msgpack_ofs_) {
+      this->ofs_.write(buf.data(), buf.size());
+    }
   }
 
   void Output::zmq_pub(const msgpack::sbuffer &buf) {

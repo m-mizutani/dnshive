@@ -57,6 +57,7 @@ namespace dnshive {
     bool enable_redis_db (const std::string &host, const std::string &port,
                           const std::string &db);
     bool enable_zmq (const std::string &addr);
+    bool enable_msgpack_ofs (const std::string &addr);
     void set_handler (Handler *hdlr);
     void unset_handler ();
     void enable_quiet ();

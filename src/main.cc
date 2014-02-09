@@ -53,6 +53,14 @@ int run(const optparse::Values &opt, const std::vector<std::string> &args) {
     } 
   }
 
+  // Enable MsgPack object
+  if (opt.is_set("msgpack_path")) {
+    if (!h->enable_msgpack_ofs(opt["msgpack_path"])) {
+      std::cerr << "Error: " << h->errmsg () << std::endl;
+      return 1;
+    } 
+  }
+
   if (opt.is_set ("interface")) {
     // monitoring network interface
     std::cerr << "Interface: " << opt["interface"] << std::endl;
@@ -103,6 +111,10 @@ int main (int argc, char *argv[]) {
     .metavar ("STR")
     .help("Enable ZeroMQ PUB address, such as '*:9000'");
 
+  // options for MsgPack
+  psr.add_option("-m").action("store").dest("msgpack_path")
+    .metavar ("STR")
+    .help("Enable MsgPack object to save events");
 
   psr.add_option("-q").action("store_true").dest("quiet")
     .help("Quiet mode");
