@@ -29,22 +29,21 @@
 #include <iostream>
 #include <sstream>
 
-#include "dnsdb.h"
-#include "debug.h"
+#include "./output.h"
+#include "./dnsdb.h"
+#include "./debug.h"
 
 namespace dnshive {
   const std::string DnsDB::REDIS_HOST_ = "localhost";
   const int DnsDB::REDIS_PORT_ = 6379;
-  const int DnsDB::ZMQ_IO_THREAT_ = 5;
   const bool DBG = false;
 
-  DnsDB::DnsDB () : redis_ctx_(NULL), zmq_ctx_(ZMQ_IO_THREAT_), zmq_sock_(NULL) {
+  DnsDB::DnsDB () : redis_ctx_(NULL), output_(NULL) {
   }
   DnsDB::~DnsDB () {
     if (this->redis_ctx_) {
       redisFree (this->redis_ctx_);
     }
-    delete this->zmq_sock_;
   }
 
   bool DnsDB::enable_redis_db (const std::string &host, const std::string &port,
@@ -145,21 +144,6 @@ namespace dnshive {
     return rc;
   }
 
-  bool DnsDB::enable_zmq(const std::string &addr) {
-    std::stringstream ss;
-    ss <<  "tcp://" << addr;
-    this->zmq_sock_ = new zmq::socket_t (this->zmq_ctx_, ZMQ_PUB);
-    try {
-      this->zmq_sock_->bind(ss.str().c_str());
-    } catch (zmq::error_t &e) {
-      this->errmsg_ = e.what();
-      return false;
-    }
-    
-    return true;
-  }
-
-
 
   const std::string * DnsDB::lookup (void * addr, size_t len) {
     std::string key (static_cast<char *>(addr), len);
@@ -204,14 +188,8 @@ namespace dnshive {
       }
 
       // publish zmq message
-      if (this->zmq_sock_) {
-        zmq::message_t message(buf.size());
-        ::memcpy(message.data(), buf.data(), buf.size());
-        try {
-          this->zmq_sock_->send(message);
-        } catch (zmq::error_t &e) {
-          std::cerr << e.what() << std::endl;
-        }
+      if (this->output_) {
+        this->output_->dns_answer(ts, name, type, addr, dst_addr);
       }
     }
   }
@@ -233,6 +211,9 @@ namespace dnshive {
     return;
   }
 
+  void DnsDB::set_output(Output *output) {
+    this->output_ = output;
+  }
   const std::string &DnsDB::errmsg () const {
     return this->errmsg_;
   }

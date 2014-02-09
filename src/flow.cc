@@ -24,11 +24,13 @@
  * POSSIBILITY OF SUCH DAMAGE.
  */
 
-#include "flow.h"
-#include "dnsdb.h"
 #include <sstream>
 #include <iostream>
 #include <string.h>
+
+#include "./flow.h"
+#include "./output.h"
+#include "./dnsdb.h"
 
 namespace dnshive {
   Flow::Flow(const swarm::Property &p, const std::string &src, 
@@ -43,9 +45,11 @@ namespace dnshive {
     this->c_pkt_ = 0;
     this->c_size_ = 0;
     this->c_name_ = src;
+    this->c_port_ = p.src_port();
     this->s_pkt_ = 0;
     this->s_size_ = 0;
     this->s_name_ = dst;
+    this->s_port_ = p.dst_port();
 
     /*    
     std::stringstream ss;
@@ -82,6 +86,15 @@ namespace dnshive {
   FlowHandler::~FlowHandler () {
     this->flow_table_.flush();
     while (Flow *ef = dynamic_cast<Flow*>(this->flow_table_.pop())) {
+      /*
+          debug(1, "expired: %ds %s<->%s (%d byte %d pkt / %d byte %d pkt)", 
+                ef->duration(), ef->c_name().c_str(),
+                ef->s_name().c_str(), 
+                ef->c_size(), ef->c_pkt(), ef->s_size(), ef->s_pkt());
+      */
+      if (this->output_) {
+        this->output_->expire_flow(*ef);
+      }
       delete ef;
     }
   }
@@ -89,7 +102,9 @@ namespace dnshive {
   void FlowHandler::set_db (DnsDB *db) {
     this->db_ = db;
   }
-
+  void FlowHandler::set_output(Output *output) {
+    this->output_ = output;
+  }
   void FlowHandler::recv (swarm::ev_id eid, const  swarm::Property &p) {
     const int TIMEOUT = 300;
 
@@ -97,14 +112,19 @@ namespace dnshive {
     if (this->last_ts_ > 0 && this->last_ts_ < p.tv_sec()) {
       this->flow_table_.prog(p.tv_sec() - this->last_ts_);
       Flow *ef;
-      while (ef = dynamic_cast<Flow*>(this->flow_table_.pop())) {
+      while ((ef = dynamic_cast<Flow*>(this->flow_table_.pop()))) {
         if (p.tv_sec() < ef->last_ts() + TIMEOUT) {
           this->flow_table_.put(TIMEOUT, ef);
         } else {
+          if (this->output_) {
+            this->output_->expire_flow(*ef);
+          }
+          /*
           debug(1, "expired: %ds %s<->%s (%d byte %d pkt / %d byte %d pkt)", 
                 ef->duration(), ef->c_name().c_str(),
                 ef->s_name().c_str(), 
                 ef->c_size(), ef->c_pkt(), ef->s_size(), ef->s_pkt());
+          */
           delete ef;
         }
       }
@@ -140,6 +160,9 @@ namespace dnshive {
         f = new Flow(p, *src, *dst);
         this->flow_table_.put(TIMEOUT, f);
         debug(1, "%s:%d -> %s:%d", src->c_str(), p.src_port(), dst->c_str(), p.dst_port());
+        if (this->output_) {
+          this->output_->new_flow(*f);
+        }
       }
     }
     assert(f);

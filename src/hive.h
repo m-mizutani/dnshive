@@ -29,12 +29,12 @@
 
 #include <swarm.h>
 #include <vector>
-#include <zmq.hpp>
 
 namespace dnshive {
   class DnsDB;
   class FlowHandler;
-  
+  class Output;
+
   class Handler {
   public:
     virtual void flow (const std::string &src, const std::string &dst,
@@ -48,6 +48,7 @@ namespace dnshive {
     FlowHandler *ip_flow_;
     std::string errmsg_;
     bool quiet_;
+    Output *output_;
 
   public:
     Hive ();

@@ -75,6 +75,7 @@ int run(const optparse::Values &opt, const std::vector<std::string> &args) {
     std::cerr << "No file and interface to capture. exiting..." << std::endl;
   }
 
+  delete h;
   return 0;
 }
 

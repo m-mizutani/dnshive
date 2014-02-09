@@ -1,5 +1,5 @@
 /*-
- * Copyright (c) 2013 Masayoshi Mizutani <mizutani@sfc.wide.ad.jp>
+ * Copyright (c) 2013-2014 Masayoshi Mizutani <mizutani@sfc.wide.ad.jp>
  * All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
@@ -24,44 +24,33 @@
  * POSSIBILITY OF SUCH DAMAGE.
  */
 
-#ifndef SRC__DNSDB__
-#define SRC__DNSDB__
+#ifndef SRC__OUTPUT__
+#define SRC__OUTPUT__
 
-#include <swarm.h>
-#include <hiredis/hiredis.h>
-#include "./hive.h"
+#include <string>
+#include <zmq.hpp>
+#include <msgpack.hpp>
 
 namespace dnshive {
-  class Output;
-
-  class DnsDB : public swarm::Handler {
+  class Flow;
+  class Output {
   private:
-    static const std::string REDIS_HOST_;
-    static const int REDIS_PORT_;
-    static const int ZMQ_IO_THREAT_;
-
-    std::map <std::string, std::string> rev_map_;
-    redisContext *redis_ctx_;
-    Output *output_;
-
+    static const int ZMQ_IO_THREAD_ ;
+    zmq::context_t zmq_ctx_;
+    zmq::socket_t *zmq_sock_;
     std::string errmsg_;
+    void zmq_pub(const msgpack::sbuffer &buf);
 
-    void insert(const std::string &name, const std::string &type,
-                const std::string &addr, void *ptr, size_t len,
-                double ts, const std::string &dst_addr);
   public:
-    DnsDB ();
-    ~DnsDB ();
-    const std::string * lookup (void * addr, size_t len);
-    void recv (swarm::ev_id eid, const  swarm::Property &p);
-    bool enable_redis_db (const std::string &host, const std::string &port,
-                          const std::string &db);
-    int load_redis_db ();
-    void set_output(Output *output);
-    const std::string &errmsg () const;
+    Output();
+    ~Output();
+    bool enable_zmq (const std::string &addr);
+    const std::string &errmsg() const { return this->errmsg_; }
+    void dns_answer(double ts, const std::string &name, const std::string &type,
+                    const std::string &addr, const std::string &dst_addr);
+    void new_flow(const Flow &f);
+    void expire_flow(const Flow &f);
   };
+}
 
-}  // namespace dnshive
-
-#endif  // SRC__DNSDB__
-
+#endif  // SRC__OUTPUT__

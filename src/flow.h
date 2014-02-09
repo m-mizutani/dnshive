@@ -32,6 +32,7 @@
 
 namespace dnshive {
   class DnsDB;
+  class Output;
 
   class Flow : public LRUHash::Node {
   private:
@@ -40,9 +41,11 @@ namespace dnshive {
     uint64_t hash_;
     time_t base_ts_;
     time_t last_ts_;
-
+    double syn_ts_;
+    int proto_;
     swarm::FlowDir dir_;
     // Source of first packet is client
+    
     size_t c_pkt_;
     size_t c_size_;
     std::string c_name_;
@@ -77,13 +80,16 @@ namespace dnshive {
   private:
     DnsDB * db_;
     LRUHash flow_table_;
+    Output *output_;
     time_t last_ts_;
 
   public:
     FlowHandler ();
     virtual ~FlowHandler ();
     void set_db (DnsDB *db);
+    void set_output(Output *output);
     void recv (swarm::ev_id eid, const  swarm::Property &p);
+
   };
 }
 

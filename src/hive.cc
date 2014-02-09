@@ -32,6 +32,7 @@
 #include "hive.h"
 #include "dnsdb.h"
 #include "flow.h"
+#include "output.h"
 #include "debug.h"
 
 namespace dnshive {
@@ -39,17 +40,21 @@ namespace dnshive {
     this->nd_ = new swarm::NetDec ();
     this->dns_db_ = new DnsDB ();
     this->ip_flow_ = new FlowHandler ();
+    this->output_ = new Output();
     this->ip_flow_->set_db (this->dns_db_);
     this->nd_->set_handler ("dns.an", this->dns_db_);
     this->nd_->set_handler ("mdns.an", this->dns_db_);
     this->nd_->set_handler ("llmnr.an", this->dns_db_);
     this->nd_->set_handler ("ipv4.packet", this->ip_flow_);
     this->nd_->set_handler ("ipv6.packet", this->ip_flow_);
+    this->ip_flow_->set_output(this->output_);
+    this->dns_db_->set_output(this->output_);
   }
   Hive::~Hive () {
     delete this->nd_;
     delete this->ip_flow_;
     delete this->dns_db_;
+    delete this->output_;
   }
 
   bool Hive::capture (const std::string &arg, bool dev) {
@@ -84,8 +89,8 @@ namespace dnshive {
   }
 
   bool Hive::enable_zmq (const std::string &addr) {
-    if (!this->dns_db_->enable_zmq(addr)) {
-      this->errmsg_ = this->dns_db_->errmsg ();
+    if (!this->output_->enable_zmq(addr)) {
+      this->errmsg_ = this->output_->errmsg ();
       return false;
     }
 
