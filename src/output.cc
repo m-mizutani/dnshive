@@ -51,16 +51,21 @@ namespace dnshive {
     return true;
   }
 
+  const std::string Output::k_event  = "event";
+  const std::string Output::k_ts     = "ts";
+  const std::string Output::k_type   = "type";
+  const std::string Output::k_src    = "src";
+  const std::string Output::k_name   = "name";
+  const std::string Output::k_addr   = "addr";
+  const std::string Output::k_client = "client";
+  const std::string Output::k_server = "server";
+
   void Output::dns_answer(double ts, const std::string &name, const std::string &type,
                           const std::string &addr, const std::string &dst_addr) {
-    static const std::string k_ts   = "ts";
-    static const std::string k_type = "type";
-    static const std::string k_src  = "src";
-    static const std::string k_name = "name";
-    static const std::string k_addr = "addr";
     msgpack::sbuffer buf;
     msgpack::packer <msgpack::sbuffer> pk (&buf);
-    pk.pack_map (5);
+    pk.pack_map (6);
+    pk.pack (k_event); pk.pack (std::string("dns.answer"));
     pk.pack (k_ts); pk.pack (ts);
     pk.pack (k_src); pk.pack (dst_addr);  // Host that sent the query
     pk.pack (k_type); pk.pack (type);
@@ -73,11 +78,11 @@ namespace dnshive {
     msgpack::sbuffer buf;
     msgpack::packer <msgpack::sbuffer> pk (&buf);
     pk.pack_map (6);
-    pk.pack (std::string("event")); pk.pack (std::string("new"));
-    pk.pack (std::string("ts")); pk.pack (f.base_ts());
-    pk.pack (std::string("client")); pk.pack (f.c_name());  // Host that sent the query
+    pk.pack (k_event); pk.pack (std::string("new"));
+    pk.pack (k_ts); pk.pack (f.base_ts());
+    pk.pack (k_client); pk.pack (f.c_name());  // Host that sent the query
     pk.pack (std::string("c_port")); pk.pack (f.c_port());
-    pk.pack (std::string("server")); pk.pack (f.s_name());
+    pk.pack (k_server); pk.pack (f.s_name());
     pk.pack (std::string("s_port")); pk.pack (f.s_port());
 
     this->zmq_pub(buf);
@@ -86,13 +91,13 @@ namespace dnshive {
     msgpack::sbuffer buf;
     msgpack::packer <msgpack::sbuffer> pk (&buf);
     pk.pack_map (10);
-    pk.pack (std::string("event")); pk.pack (std::string("end"));
-    pk.pack (std::string("ts")); pk.pack (f.base_ts());
-    pk.pack (std::string("client")); pk.pack (f.c_name());  // Host that sent the query
+    pk.pack (k_event); pk.pack (std::string("end"));
+    pk.pack (k_ts); pk.pack (f.base_ts());
+    pk.pack (k_client); pk.pack (f.c_name());  // Host that sent the query
     pk.pack (std::string("c_size")); pk.pack (f.c_size());
     pk.pack (std::string("c_pkt")); pk.pack (f.c_pkt());
     pk.pack (std::string("c_port")); pk.pack (f.c_port());
-    pk.pack (std::string("server")); pk.pack (f.s_name());
+    pk.pack (k_server); pk.pack (f.s_name());
     pk.pack (std::string("s_size")); pk.pack (f.s_size());
     pk.pack (std::string("s_pkt")); pk.pack (f.s_pkt());
     pk.pack (std::string("s_port")); pk.pack (f.s_port());

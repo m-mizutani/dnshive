@@ -35,6 +35,15 @@ namespace dnshive {
   class Flow;
   class Output {
   private:
+    static const std::string k_event;
+    static const std::string k_ts;
+    static const std::string k_type;
+    static const std::string k_src;
+    static const std::string k_name;
+    static const std::string k_addr;
+    static const std::string k_client;
+    static const std::string k_server;
+
     static const int ZMQ_IO_THREAD_ ;
     zmq::context_t zmq_ctx_;
     zmq::socket_t *zmq_sock_;

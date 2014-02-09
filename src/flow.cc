@@ -86,12 +86,6 @@ namespace dnshive {
   FlowHandler::~FlowHandler () {
     this->flow_table_.flush();
     while (Flow *ef = dynamic_cast<Flow*>(this->flow_table_.pop())) {
-      /*
-          debug(1, "expired: %ds %s<->%s (%d byte %d pkt / %d byte %d pkt)", 
-                ef->duration(), ef->c_name().c_str(),
-                ef->s_name().c_str(), 
-                ef->c_size(), ef->c_pkt(), ef->s_size(), ef->s_pkt());
-      */
       if (this->output_) {
         this->output_->expire_flow(*ef);
       }
@@ -119,12 +113,6 @@ namespace dnshive {
           if (this->output_) {
             this->output_->expire_flow(*ef);
           }
-          /*
-          debug(1, "expired: %ds %s<->%s (%d byte %d pkt / %d byte %d pkt)", 
-                ef->duration(), ef->c_name().c_str(),
-                ef->s_name().c_str(), 
-                ef->c_size(), ef->c_pkt(), ef->s_size(), ef->s_pkt());
-          */
           delete ef;
         }
       }
@@ -159,7 +147,6 @@ namespace dnshive {
 
         f = new Flow(p, *src, *dst);
         this->flow_table_.put(TIMEOUT, f);
-        debug(1, "%s:%d -> %s:%d", src->c_str(), p.src_port(), dst->c_str(), p.dst_port());
         if (this->output_) {
           this->output_->new_flow(*f);
         }
