@@ -27,8 +27,8 @@
 #ifndef __LIB_DNSHIVE_H__
 #define __LIB_DNSHIVE_H__
 
-#include <swarm.h>
 #include <vector>
+#include <swarm/swarm.h>
 
 namespace dnshive {
   class DnsDB;

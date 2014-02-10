@@ -25,7 +25,6 @@
  */
 
 #include <sys/types.h>
-#include <swarm.h>
 #include <map>
 #include <sstream>
 
