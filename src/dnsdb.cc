@@ -145,19 +145,25 @@ namespace dnshive {
   }
 
 
-  const std::string * DnsDB::lookup (void * addr, size_t len) {
+  const std::string *DnsDB::lookup (void * addr, size_t len) {
     std::string key (static_cast<char *>(addr), len);
     auto it = this->rev_map_.find (key);
     if (it == this->rev_map_.end ()) {
       return NULL;
     } else {
-      const std::string &name = (it->second);
-      auto cit = this->cname_map_.find(name);
-      if (cit != this->cname_map_.end()) {
-        return &(it->second);
-      } else {
-        return &name;
+      std::string *name = &(it->second);
+      static const size_t MAX_RECUR = 10;
+      for (size_t i = 0; i < MAX_RECUR; i++) {
+        auto cit = this->cname_map_.find(*name);
+        if (cit != this->cname_map_.end()) {
+          name = &(it->second);
+        } else {
+          break;
+        }
       }
+
+      assert(name);
+      return name;
     }
   }
 
