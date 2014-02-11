@@ -41,8 +41,9 @@ int run(const optparse::Values &opt, const std::vector<std::string> &args) {
     }
   }
 
+  // Disable output of packet detail
   if (opt.get("quiet")) {
-    // -----
+    h->enable_quiet();
   }
 
   // Enable ZeroMQ PUB server

@@ -47,11 +47,13 @@ namespace dnshive {
     this->c_pkt_ = 0;
     this->c_size_ = 0;
     this->c_name_ = src;
+    this->c_addr_ = p.src_addr();
     this->c_port_ = p.src_port();
     this->s_pkt_ = 0;
     this->s_size_ = 0;
     this->s_name_ = dst;
     this->s_port_ = p.dst_port();
+    this->s_addr_ = p.dst_addr();
 
     /*    
     std::stringstream ss;
@@ -83,7 +85,7 @@ namespace dnshive {
     }
   }
 
-  FlowHandler::FlowHandler () : flow_table_(600), last_ts_(0) {
+  FlowHandler::FlowHandler () : flow_table_(600), last_ts_(0), output_pkt_(true) {
   }
   FlowHandler::~FlowHandler () {
     this->flow_table_.flush();
@@ -100,6 +102,12 @@ namespace dnshive {
   }
   void FlowHandler::set_output(Output *output) {
     this->output_ = output;
+  }
+  void FlowHandler::enable_output_pkt() {
+    this->output_pkt_ = true;
+  }
+  void FlowHandler::disable_output_pkt() {
+    this->output_pkt_ = false;
   }
   void FlowHandler::recv (swarm::ev_id eid, const  swarm::Property &p) {
     const int TIMEOUT = 300;
@@ -122,35 +130,45 @@ namespace dnshive {
     this->last_ts_ = p.tv_sec();
 
     // Look up host name
-    std::string s_tmp, d_tmp;
     const std::string *src = NULL, *dst = NULL;
+    const std::string *src_name = NULL, *dst_name = NULL;
+    std::string src_addr, dst_addr;
     size_t src_len, dst_len;
     void *s_addr = p.src_addr (&src_len);
     void *d_addr = p.dst_addr (&dst_len);
 
     // Need both of source address and destination address
     if (s_addr && d_addr) {
-      if (NULL == (src = this->db_->lookup (s_addr, src_len))) {
-        s_tmp = p.src_addr ();
-        src = &s_tmp;
-      }
-      if (NULL == (dst = this->db_->lookup (d_addr, dst_len))) {
-        d_tmp = p.dst_addr ();
-        dst = &d_tmp;
-      }
+      src_name = this->db_->lookup (s_addr, src_len);
+      dst_name = this->db_->lookup (d_addr, src_len);
+      src_addr = p.src_addr();
+      dst_addr = p.dst_addr();
+
+      src = (src_name) ? src_name : &src_addr;
+      dst = (dst_name) ? dst_name : &dst_addr;
     }
 
-    if (src && dst) {
-      printf("%u.%06u %s %s/%d -> %s/%d Len:%d\n", 
-             p.tv_sec (), p.tv_usec(), p.proto().c_str(),
-             src->c_str(), p.src_port(), dst->c_str(), p.dst_port(), p.len());
-      /*
-      std::cout << p.tv_sec () << "." << std::setfill("0") << std::setw(5) 
-                << p.tv_usec() << " " << p.proto() << " " 
-                << *src << "/" << p.src_port() << " -> " 
-                << *dst << "/" << p.dst_port() << " " 
-                << "Len:" << p.len() << std::endl;
-      */
+    assert(src && dst);
+
+    if (this->output_pkt_) {
+      printf("%u.%06u %s ",
+             p.tv_sec (), p.tv_usec(), p.proto().c_str());
+
+      if (src_name) {
+        printf("%s(%s)/%d", src_name->c_str(), src_addr.c_str(), p.src_port());
+      } else {
+        printf("%s/%d", src_addr.c_str(), p.src_port());
+      }
+
+      printf(" -> ");
+
+      if (dst_name) {
+        printf("%s(%s)/%d", dst_name->c_str(), dst_addr.c_str(), p.dst_port());
+      } else {
+        printf("%s/%d", dst_addr.c_str(), p.dst_port());
+      }
+
+      printf (" Len:%d\n", p.len());
     }
 
     // Look up existing Flow object

@@ -47,7 +47,6 @@ namespace dnshive {
     DnsDB *dns_db_;
     FlowHandler *ip_flow_;
     std::string errmsg_;
-    bool quiet_;
     Output *output_;
 
   public:

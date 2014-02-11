@@ -49,11 +49,13 @@ namespace dnshive {
     size_t c_pkt_;
     size_t c_size_;
     std::string c_name_;
+    std::string c_addr_;
     int c_port_;
     // Destination of first packet is server
     size_t s_pkt_;
     size_t s_size_;
     std::string s_name_;
+    std::string s_addr_;
     int s_port_;
 
   public:
@@ -82,14 +84,16 @@ namespace dnshive {
     LRUHash flow_table_;
     Output *output_;
     time_t last_ts_;
+    bool output_pkt_;
 
   public:
     FlowHandler ();
     virtual ~FlowHandler ();
     void set_db (DnsDB *db);
     void set_output(Output *output);
+    void enable_output_pkt();
+    void disable_output_pkt();
     void recv (swarm::ev_id eid, const  swarm::Property &p);
-
   };
 }
 

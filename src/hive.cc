@@ -35,7 +35,7 @@
 #include "debug.h"
 
 namespace dnshive {
-  Hive::Hive () : quiet_(false) { 
+  Hive::Hive () { 
     this->nd_ = new swarm::NetDec ();
     this->dns_db_ = new DnsDB ();
     this->ip_flow_ = new FlowHandler ();
@@ -107,7 +107,10 @@ namespace dnshive {
 
 
   void Hive::enable_quiet () {
-    this->quiet_ = true;
+    assert(this->ip_flow_);
+    if (this->ip_flow_) {
+      this->ip_flow_->disable_output_pkt();
+    }
   }
 
   const std::string& Hive::errmsg () const {
