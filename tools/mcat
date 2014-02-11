@@ -1,0 +1,12 @@
+#!/usr/bin/env python
+
+import msgpack
+import sys
+
+def mcat(stream):
+    unpkr = msgpack.Unpacker(stream)
+    for data in unpkr: print data
+
+if __name__ == '__main__':
+    for arg in sys.argv[1:]:
+        mcat(open(arg, 'r'))
