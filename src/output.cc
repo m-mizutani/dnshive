@@ -32,7 +32,7 @@
 namespace dnshive {
   const int Output::ZMQ_IO_THREAD_ = 5;
   Output::Output() : zmq_ctx_(ZMQ_IO_THREAD_), zmq_sock_(NULL), 
-                     enable_msgpack_ofs_(false) {
+                     enable_msgpack_ofs_(false), text_out_(NULL) {
   }
   Output::~Output() {
     delete this->zmq_sock_;
@@ -93,6 +93,9 @@ namespace dnshive {
     pk.pack (k_name); pk.pack (name);
     pk.pack (k_res);  pk.pack (addr);
 
+    if (this->text_out_) {
+      *(this->text_out_) << ts << " DNS:Answer " << type << " " << std::endl;
+    }
     this->write_stream(buf);
     this->zmq_pub(buf);
   }

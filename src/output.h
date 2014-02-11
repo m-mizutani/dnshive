@@ -57,10 +57,12 @@ namespace dnshive {
     std::string errmsg_;
     void zmq_pub(const msgpack::sbuffer &buf);
     void write_stream(const msgpack::sbuffer &buf);
-    
+    std::ostream *text_out_;
+
   public:
     Output();
     ~Output();
+    bool enable_text_output(std::ostream *out);
     bool enable_zmq (const std::string &addr);
     bool enable_msgpack_ofs (const std::string &path);
     const std::string &errmsg() const { return this->errmsg_; }

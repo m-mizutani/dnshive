@@ -42,7 +42,7 @@ namespace dnshive {
     time_t base_ts_;
     time_t last_ts_;
     double syn_ts_;
-    int proto_;
+    std::string proto_;
     swarm::FlowDir dir_;
     // Source of first packet is client
     

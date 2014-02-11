@@ -156,7 +156,8 @@ namespace dnshive {
       for (size_t i = 0; i < MAX_RECUR; i++) {
         auto cit = this->cname_map_.find(*name);
         if (cit != this->cname_map_.end()) {
-          name = &(it->second);
+          debug(DBG, "cname trace: %s -> %s", name->c_str(), (cit->second).c_str());
+          name = &(cit->second);
         } else {
           break;
         }
@@ -181,6 +182,7 @@ namespace dnshive {
     }
 
     if (type == "CNAME") {
+      debug(DBG, "insert: %s -> %s", addr.c_str(), name.c_str());
       this->cname_map_.insert(std::make_pair(addr, name));
     }
 

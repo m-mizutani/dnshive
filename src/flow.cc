@@ -26,6 +26,7 @@
 
 #include <sstream>
 #include <iostream>
+#include <iomanip>
 #include <string.h>
 
 #include "./flow.h"
@@ -42,6 +43,7 @@ namespace dnshive {
     this->dir_ = p.dir();
 
     this->base_ts_ = p.tv_sec();
+    this->proto_ = p.proto();
     this->c_pkt_ = 0;
     this->c_size_ = 0;
     this->c_name_ = src;
@@ -119,6 +121,38 @@ namespace dnshive {
     }
     this->last_ts_ = p.tv_sec();
 
+    // Look up host name
+    std::string s_tmp, d_tmp;
+    const std::string *src = NULL, *dst = NULL;
+    size_t src_len, dst_len;
+    void *s_addr = p.src_addr (&src_len);
+    void *d_addr = p.dst_addr (&dst_len);
+
+    // Need both of source address and destination address
+    if (s_addr && d_addr) {
+      if (NULL == (src = this->db_->lookup (s_addr, src_len))) {
+        s_tmp = p.src_addr ();
+        src = &s_tmp;
+      }
+      if (NULL == (dst = this->db_->lookup (d_addr, dst_len))) {
+        d_tmp = p.dst_addr ();
+        dst = &d_tmp;
+      }
+    }
+
+    if (src && dst) {
+      printf("%u.%06u %s %s/%d -> %s/%d Len:%d\n", 
+             p.tv_sec (), p.tv_usec(), p.proto().c_str(),
+             src->c_str(), p.src_port(), dst->c_str(), p.dst_port(), p.len());
+      /*
+      std::cout << p.tv_sec () << "." << std::setfill("0") << std::setw(5) 
+                << p.tv_usec() << " " << p.proto() << " " 
+                << *src << "/" << p.src_port() << " -> " 
+                << *dst << "/" << p.dst_port() << " " 
+                << "Len:" << p.len() << std::endl;
+      */
+    }
+
     // Look up existing Flow object
     size_t len;
     const void *key = p.ssn_label(&len);
@@ -126,30 +160,12 @@ namespace dnshive {
       (this->flow_table_.get(p.hash_value(), key, len));
 
     // If not found,
-    if (f == NULL) {
+    if (f == NULL && src && dst) {
       // Allocation new Flow object
-      std::string s_tmp, d_tmp;
-      const std::string *src, *dst;
-      size_t src_len, dst_len;
-      void *s_addr = p.src_addr (&src_len);
-      void *d_addr = p.dst_addr (&dst_len);
-
-      // Need both of source address and destination address
-      if (s_addr && d_addr) {
-        if (NULL == (src = this->db_->lookup (s_addr, src_len))) {
-          s_tmp = p.src_addr ();
-          src = &s_tmp;
-        }
-        if (NULL == (dst = this->db_->lookup (d_addr, dst_len))) {
-          d_tmp = p.dst_addr ();
-          dst = &d_tmp;
-        }
-
-        f = new Flow(p, *src, *dst);
-        this->flow_table_.put(TIMEOUT, f);
-        if (this->output_) {
-          this->output_->new_flow(*f);
-        }
+      f = new Flow(p, *src, *dst);
+      this->flow_table_.put(TIMEOUT, f);
+      if (this->output_) {
+        this->output_->new_flow(*f);
       }
     }
     assert(f);
