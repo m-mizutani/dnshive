@@ -57,7 +57,7 @@ namespace dnshive {
 
   bool Output::enable_msgpack_ofs(const std::string &path) {
     try {
-      this->ofs_.open(path, std::ios::binary);
+      this->ofs_.open(path.c_str(), std::ios::binary);
     } catch (std::ios_base::failure &e) {
       this->errmsg_ = e.what();
       return false;
