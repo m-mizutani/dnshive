@@ -1,27 +1,39 @@
+
 DnsHive : Domain Name Oriented Traffic Monitor
 ============================================
 
 Overview
 --------------------------------------------
 DnsHive monitors network traffic and gather results of DNS forward lookup, 
-and provides network information according to DNS query resutls. 
-Then you can recognize what server dose your computer communicate.
+and provides network information according to results of DNS queries. 
+Then you can see not only IP address of packet, but also original domain name of IP address.
+It would help you to recognize what server your computer communicates with.
 
 
 Example
 --------------------------------------------
+[example]:Output example of packet detail
 
 ### Reverse lookup based display (like tcpdump)
 
-    TCP 10.0.0.2/51694 > iad23s07-in-f1.1e100.net/443
-    TCP iad23s07-in-f1.1e100.net/443 > 10.0.0.2/51694
-    TCP 10.0.0.2/51694 > iad23s07-in-f1.1e100.net/443
+    IP nrt19s12-in-f8.1e100.net.https > 10.0.0.129.55440
+	IP 10.0.0.129.55440 > nrt19s12-in-f8.1e100.net.https
+	IP 10.0.0.129.55446 > nrt04s06-in-f21.1e100.net.http
+	IP nrt04s06-in-f21.1e100.net.http > 10.0.0.129.55446
 
 ### Forward lookup based display (DnsHive)
 
-    TCP my-macosx.local/51694 > www.google.com/443
-    TCP www.google.com/443 > my-macosx.local/51694
-    TCP my-macosx.local/51694 > www.google.com/443
+    TCP encrypted-tbn3.gstatic.com.(74.125.235.168)/443 -> 10.0.0.129/55440
+	TCP 10.0.0.129/55440 -> encrypted-tbn3.gstatic.com.(74.125.235.168)/443
+	TCP 10.0.0.129/55446 -> gmail.com.(173.194.126.181)/80
+	TCP gmail.com.(173.194.126.181)/80 -> 10.0.0.129/55446
+
+Major Functions
+--------------------------------------------
+
+- Traffic monitoring and output packet detail based on DNS forward lookup (see [Example][example])
+- Store DNS query and response to redis server, and Load old history of DNS records when restarting
+- Output logs of DNS response records (A/AAAA/CNAME) and Flow start/end to ZeroMQ PUB or to file of msgpack format
 
 Install
 --------------------------------------------
@@ -57,50 +69,23 @@ Install DnsHive
 Usage
 --------------------------------------------
 
-Sample command line
+### Capture packets from network interface, and saving DNS 
 
-    % dnshive -i eth0 -d 0
+    % sudo dnshive -i eth0 -d 0
 
-The command line specify to monitor `eth0`, and to insert query record into Redis server index `0`. When re-executing the command line after the process quits, the new process loads query data from Reids DB and re-construct name lookup database in the process.
+The command line specifies to monitor `eth0`, and to insert query record into Redis server index `0`. When re-executing the command line after the process quits, the new process loads query data from Reids DB and re-construct name lookup database in the process.
 
-    % dhive -h
-    Usage: dhive [options]
-    
-    Options:
-      -h, --help            show this help message and exit
-      -r STRING             Specify read pcap format file(s)
-      -i STRING             Specify interface to monitor on the fly
-      -d INT                Redis DB Index (MUST be set if you want redis DB
-      -h STRING             Reids DB Host, default is localhost
-      -p INT                Reids DB Port, default is 6379
+### Read pcap file
 
+    % dnshive -r somefile.pcap
 
-LISENCE
---------------------------------------------
+The command specifies pcap format file `somefile.pcap` and output traffic.
 
-BSD 2-Clause license
+### Output events of flow and DNS record to msgpack stream as file
 
-Copyright (c) 2013 Masayoshi Mizutani <mizutani@sfc.wide.ad.jp> All rights reserved.
+    % dnshive -r somefile.pcap -q -m somefile.msg
+	
+### Output events of flow and DNS record to ZeroMQ publish socket.
 
-Redistribution and use in source and binary forms, with or without
-modification, are permitted provided that the following conditions
-are met:
-
-1. Redistributions of source code must retain the above copyright
-   notice, this list of conditions and the following disclaimer.
-2. Redistributions in binary form must reproduce the above copyright
-   notice, this list of conditions and the following disclaimer in the
-   documentation and/or other materials provided with the distribution.
-
-THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS
-``AS IS'' AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED
-TO, THE IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR
-PURPOSE ARE DISCLAIMED.  IN NO EVENT SHALL THE FOUNDATION OR CONTRIBUTORS
-BE LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR
-CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF
-SUBSTITUTE GOODS OR SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS
-INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN
-CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE)
-ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
-POSSIBILITY OF SUCH DAMAGE.
+    % dnshive -i eth0 -q -z "*:9000"
 
