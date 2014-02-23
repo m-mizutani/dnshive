@@ -1,5 +1,5 @@
 /*-
- * Copyright (c) 2013 Masayoshi Mizutani <mizutani@sfc.wide.ad.jp>
+ * Copyright (c) 2013-2014 Masayoshi Mizutani <mizutani@sfc.wide.ad.jp>
  * All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
@@ -24,10 +24,18 @@
  * POSSIBILITY OF SUCH DAMAGE.
  */
 
-#include <hive.h>
+#include <string>
+#include "./hive.h"
 #include "./optparse.h"
 
+static const std::string VERSION = "1.0.0";
+
 int run(const optparse::Values &opt, const std::vector<std::string> &args) {
+  // Show version number, and exit
+  if (opt.get("version")) {
+    std::cout << "DnsHive: version " << VERSION << std::endl;
+    return 0;
+  }
 
   // Preparing DnsHive instance
   dnshive::Hive *h = new dnshive::Hive ();
@@ -119,6 +127,9 @@ int main (int argc, char *argv[]) {
 
   psr.add_option("-q").action("store_true").dest("quiet")
     .help("Quiet mode");
+
+  psr.add_option("-v").action("store_true").dest("version")
+    .help("Version");
 
   optparse::Values& opt = psr.parse_args(argc, argv);
   std::vector <std::string> args = psr.args();
