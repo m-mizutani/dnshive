@@ -27,7 +27,7 @@
 #ifndef SRC__FLOW__
 #define SRC__FLOW__
 
-#include <swarm/swarm.h>
+#include <swarm.h>
 #include "./lru-hash.h"
 
 namespace dnshive {

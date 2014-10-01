@@ -27,7 +27,7 @@
 #ifndef SRC__DNSDB__
 #define SRC__DNSDB__
 
-#include <swarm/swarm.h>
+#include <swarm.h>
 #include <hiredis/hiredis.h>
 #include "./hive.h"
 
